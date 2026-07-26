@@ -1,0 +1,78 @@
+// 1. Environment Variables sabse pehle load hone chahiye
+import dotenv from "dotenv";
+dotenv.config({ path: './.env' }); 
+
+import express from "express";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import connectDB from "./src/config/db.js"; // DB Connector
+
+const app = express();
+
+// ==========================================
+// 2. GLOBAL MIDDLEWARES (Security & Parsing)
+// ==========================================
+app.use(cors({
+    origin: process.env.FRONTEND_URL || "*", // Aapki React/Website ka URL (CORS error se bachne ke liye)
+    credentials: true // Browser ko Cookies accept karne ki permission dena
+}));
+
+app.use(express.json({ limit: "16mb" })); // JSON body parse karne ke liye (req.body)
+app.use(express.urlencoded({ extended: true, limit: "16mb" })); // URL data parse karne ke liye
+app.use(cookieParser()); // req.cookies padhne ke liye (Auth ke liye bohot zaroori)
+
+// ==========================================
+// 3. ROUTE IMPORTS
+// ==========================================
+import authRoutes from "./src/routes/auth.routes.js";
+import userRoutes from "./src/routes/user.routes.js";
+import curriculumRoutes from "./src/routes/curriculum.routes.js";
+import paymentRoutes from "./src/routes/payment.routes.js";
+import adminRoutes from "./src/routes/admin.routes.js";
+import awsRoutes from "./src/routes/aws.routes.js";
+
+// ==========================================
+// 4. ROUTE DECLARATIONS (Mounting)
+// ==========================================
+app.use("/api/auth", authRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/curriculum", curriculumRoutes);
+app.use("/api/payment", paymentRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/aws", awsRoutes);
+
+// ==========================================
+// 5. 404 ROUTE CATCHER
+// ==========================================
+import ApiError from "./src/utils/ApiError.js";
+
+// Agar koi hacker ya user aisi API hit kare jo hai hi nahi (e.g., /api/hacked)
+app.all("*", (req, res, next) => {
+    next(new ApiError(404, `Route ${req.originalUrl} not found on this server.`));
+});
+
+// ==========================================
+// 6. GLOBAL ERROR HANDLER
+// ==========================================
+// Yeh hamesha saare routes ke END me aayega
+import errorHandler from "./src/middleware/errorHandler.middleware.js";
+app.use(errorHandler);
+
+// ==========================================
+// 7. STARTING THE SERVER
+// ==========================================
+const PORT = process.env.PORT || 5000;
+
+// Pehle Database connect karo, phir server start karo
+connectDB()
+    .then(() => {
+        app.listen(PORT, () => {
+            console.log(`\n🚀 Server is actively running on Port: ${PORT}`);
+            console.log(`🌐 Base API URL: http://localhost:${PORT}/api`);
+        });
+    })
+    .catch((err) => {
+        console.log("❌ Server startup failed due to database issue !!!", err);
+    });
+
+export default app;

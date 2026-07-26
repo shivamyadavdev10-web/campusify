@@ -1,0 +1,11 @@
+node_modules
+npm-debug.log
+.env
+.git
+.gitignore
+__tests__
+jest.config.js
+jest.setup.js
+test.http
+uploads
+*.mp4

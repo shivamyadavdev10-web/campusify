@@ -1,0 +1,264 @@
+# ==========================================
+# 🛠️ ADMIN PANEL TESTING VARIABLES
+# ==========================================
+@baseUrl = http://localhost:5000/api
+@deviceId = postman-test-device-123
+# Niche apna actual Access Token paste karna (Login karne ke baad)
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNTllZWQwOWVhZWVkZDllOWNmZGNjYiIsImlhdCI6MTc4NDU0NTUyOSwiZXhwIjoxNzg0NjMxOTI5fQ.xPPGpcFf92XA04H775DV5S9XafZW6dnkVw8cZ0owEaE
+###
+
+# ==========================================
+# 1. LOGIN AS ADMIN (Token Lene Ke Liye)
+# ==========================================
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+x-device-id: {{deviceId}}
+
+{
+    "email"
+    
+    
+    
+    : "shivamy1@gmail.com",
+    "password": "shivamy1@" 
+}
+# 
+###
+
+# ==========================================
+# 2. CREATE BRANCH (e.g., Computer Engineering)
+# ==========================================
+POST {{baseUrl}}/admin/branch
+Content-Type: application/json
+x-device-id: {{deviceId}}
+Authorization: Bearer {{adminToken}}
+
+{
+    "name": "Civil Engineering",
+    "shortName": "CE",
+    "description": " cement techology with AI",
+    "icon": "https://example.com/ce-icon.png",
+    "isActive": true
+}
+# 🛑 Iska response aane par _id copy kar lijiye.
+
+####
+
+# ==========================================
+# 3. CREATE SEMESTER (e.g., Sem 3)
+# ==========================================
+POST {{baseUrl}}/admin/semester
+Content-Type: application/json
+x-device-id: {{deviceId}}
+Authorization: Bearer {{adminToken}}
+
+{
+    "branchId": "6a43dac35f8bc9f5233bedfa", 
+    "semNumber": 3,
+    "title": "Semester 3 - Core cement with adani",
+    "description": "Includes various cement, etc.",
+    "price": 99,
+    "isActive": true
+}
+# 🛑 Iska response aane par _id copy kar lijiye.
+
+###
+
+# ==========================================
+# 4. CREATE SUBJECT (e.g., Data Structures)
+# ==========================================
+POST {{baseUrl}}/admin/subject
+Content-Type: application/json
+x-device-id: {{deviceId}}
+Authorization: Bearer {{adminToken}}
+
+{
+    "semesterId": "6a43db325f8bc9f5233bedfd",
+    "name": "adani cement with AI",
+    "subjectCode": "CS3011",
+    "credits": 4,
+    "description": "cement Trees,AI and adani Graphs "
+}
+# 🛑 Iska response aane par _id copy kar lijiye.
+
+###
+
+### -----------------------------------------------------------
+### 📤 5. FILE UPLOADS (Use Postman for these, kept here for docs)
+### -----------------------------------------------------------
+
+# 👉 A. UPLOAD MEDIA (Video/PDF)
+# Note: Test this in Postman using form-data
+POST {{baseUrl}}/admin/content
+Content-Type: multipart/form-data
+x-device-id: {{deviceId}}
+Authorization: Bearer {{adminToken}}
+
+# Required Form-Data Fields:
+# branchId: 6a43dac3...
+# semesterId: 6a43db32...
+# subjectId: 6a43dc11...
+# title: "Lecture 1: Introduction"
+# contentType: "Video"
+# file: [Attach .mp4 or .pdf here]
+
+###
+
+# 👉 B. BULK STUDENT UPLOAD (CSV)
+# Note: Test this in Postman using form-data
+POST {{baseUrl}}/admin/users/bulk-upload
+Content-Type: multipart/form-data
+x-device-id: {{deviceId}}
+Authorization: Bearer {{adminToken}}
+
+# Required Form-Data Fields:
+# file: [Attach students.csv here]
+
+# ==========================================
+# 6. REVOKE ACCESS (Refund)
+# ==========================================
+POST {{baseUrl}}/admin/revoke-access
+Content-Type: application/json
+x-device-id: {{deviceId}}
+Authorization: Bearer {{adminToken}}
+
+{
+    "studentEmail": "student@gmail.com",
+    "semesterId": "6a3d04877284c18faef5d4d5"
+}
+
+
+###
+# ==========================================
+# 📊 GET DASHBOARD STATS (Admin Panel Overview)
+# ==========================================
+GET {{baseUrl}}/admin/dashboard-stats
+Authorization: Bearer {{adminToken}}
+x-device-id: {{deviceId}}
+
+
+###
+# ==========================================
+# 📢 MAKE SEMESTER PUBLIC / PRIVATE
+# ==========================================
+PATCH {{baseUrl}}/admin/semester/6a43db325f8bc9f5233bedfd/toggle-publish
+Authorization: Bearer {{adminToken}}
+x-device-id: {{deviceId}}
+
+
+----------------------------------
+
+
+# ==============================================================
+# 🚀 CAMPUSIFY ADMIN API - GOD MODE TESTING SUITE
+# ==============================================================
+
+@baseUrl = http://localhost:5000/api
+@deviceId = postman-master-device-007
+@adminToken = eyJhbGciOiJIUzI1Ni... (Paste your token here after admin login)
+
+### -----------------------------------------------------------
+### 📊 1. ANALYTICS & DASHBOARD
+### -----------------------------------------------------------
+GET {{baseUrl}}/admin/dashboard-stats
+x-device-id: {{deviceId}}
+Authorization: Bearer {{adminToken}}
+
+### -----------------------------------------------------------
+### 🛡️ 2. SECURITY & ANTI-PIRACY (GOD MODE)
+### -----------------------------------------------------------
+
+# 👉 A. UNLOCK DEVICE (Clear device cache for student)
+POST {{baseUrl}}/admin/security/unlock-device
+Content-Type: application/json
+x-device-id: {{deviceId}}
+Authorization: Bearer {{adminToken}}
+
+{ "email": "student@gmail.com" }
+
+###
+
+# 👉 B. BAN/UNBAN USER (Permanent Ban -> leave banDays empty)
+POST {{baseUrl}}/admin/security/toggle-ban
+Content-Type: application/json
+x-device-id: {{deviceId}}
+Authorization: Bearer {{adminToken}}
+
+{ 
+    "email": "hacker@gmail.com", 
+    "banDays": 7,  
+    "reason": "Used Screen Recorder during video playback" 
+}
+
+###
+
+# 👉 C. CHECK SUSPICIOUS LOGS
+GET {{baseUrl}}/admin/security/suspicious-logs
+x-device-id: {{deviceId}}
+Authorization: Bearer {{adminToken}}
+
+###
+
+# 👉 D. REVEAL PASSWORD (Decrypt GCM Secret Key)
+POST {{baseUrl}}/admin/security/reveal-password
+Content-Type: application/json
+x-device-id: {{deviceId}}
+Authorization: Bearer {{adminToken}}
+
+{ "email": "student@gmail.com" }
+
+### -----------------------------------------------------------
+### 💰 3. MANUAL OPERATIONS & ACCESS
+### -----------------------------------------------------------
+
+# 👉 A. GRANT OR REVOKE ACCESS MANUALLY
+POST {{baseUrl}}/admin/users/manual-access
+Content-Type: application/json
+x-device-id: {{deviceId}}
+Authorization: Bearer {{adminToken}}
+
+{
+    "email": "student@gmail.com",
+    "semesterId": "6a43db325f8bc9f5233bedfd",
+    "action": "grant" 
+}
+
+###
+
+# 👉 B. REORDER COURSE SEQUENCE
+PATCH {{baseUrl}}/admin/subject/reorder
+Content-Type: application/json
+x-device-id: {{deviceId}}
+Authorization: Bearer {{adminToken}}
+
+{
+    "orderedIds": [
+        "6a43db325f8bc9f5233b0001",
+        "6a43db325f8bc9f5233b0002",
+        "6a43db325f8bc9f5233b0003"
+    ]
+}
+
+### -----------------------------------------------------------
+### 🚀 4. CURRICULUM SETUP (Basic CRUD)
+### -----------------------------------------------------------
+
+# 👉 A. CREATE BRANCH
+POST {{baseUrl}}/admin/branch
+Content-Type: application/json
+x-device-id: {{deviceId}}
+Authorization: Bearer {{adminToken}}
+
+{
+    "name": "Civil Engineering",
+    "shortName": "CE",
+    "description": "Core mechanics & Design",
+    "isActive": true
+}
+
+###
+
+# 👉 B. TOGGLE SEMESTER PUBLISH (Hide/Show)
+PATCH {{baseUrl}}/admin/semester/6a43db325f8bc9f5233bedfd/toggle-publish
+x-device-id: {{deviceId}}
+Authorization: Bearer {{adminToken}}
