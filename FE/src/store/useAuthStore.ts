@@ -45,9 +45,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
 
       if (response.data && response.data.status) {
-        const { accessToken, refreshToken } = response.data;
-        await get().login(accessToken, refreshToken);
-        return { success: true };
+        try {
+          const { accessToken, refreshToken } = response.data;
+          await get().login(accessToken, refreshToken);
+          return { success: true };
+        } catch (postError: any) {
+          return { success: false, message: `Post-API Error: ${postError.message}` };
+        }
       } else {
         return { success: false, message: response.data.message || "Invalid OTP" };
       }
@@ -62,13 +66,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   login: async (token, refreshToken) => {
     try {
-      await AsyncStorage.setItem('accessToken', token);
-      await AsyncStorage.setItem('refreshToken', refreshToken);
-      axiosClient.defaults.headers.common.Authorization = `Bearer ${token}`;
-      set({ userToken: token });
-      await get().fetchUserProfile();
-    } catch (error) {
+      if (!token || !refreshToken) {
+        throw new Error("Tokens are undefined or null");
+      }
+      
+      const safeToken = typeof token === 'string' ? token : JSON.stringify(token);
+      const safeRefreshToken = typeof refreshToken === 'string' ? refreshToken : JSON.stringify(refreshToken);
+
+      await AsyncStorage.setItem('accessToken', safeToken);
+      await AsyncStorage.setItem('refreshToken', safeRefreshToken);
+      axiosClient.defaults.headers.common.Authorization = `Bearer ${safeToken}`;
+      set({ userToken: safeToken });
+      
+      const profileSuccess = await get().fetchUserProfile();
+      if (!profileSuccess) {
+        console.warn("Failed to fetch user profile after login");
+      }
+    } catch (error: any) {
       console.error("Storage failed during login", error);
+      throw new Error(error.message || "Storage/State update failed");
     }
   },
 

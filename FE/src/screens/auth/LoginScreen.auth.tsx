@@ -34,19 +34,34 @@ export default function LoginScreen({ navigation }: any) {
       });
 
       if (response.data.status) {
-        await login(response.data.accessToken, response.data.refreshToken); 
+        try {
+          await login(response.data.accessToken, response.data.refreshToken); 
+        } catch (postError: any) {
+          Alert.alert('Post-API Error', postError.message || 'Failed during post-login steps.');
+        }
       }
     } catch (error: any) {
-      const axiosErr = error as AxiosError<any>;
-      const status = axiosErr.response?.status;
-      const data = axiosErr.response?.data;
+      let errorMessage = error?.message || 'Something went wrong';
+
+      const status = error?.response?.status;
+      const data = error?.response?.data;
 
       if (status === 403 && data?.isVerified === false) {
-          Alert.alert('Not Verified', data.message || 'Please verify your OTP.');
+          const msg = typeof data?.message === 'string' ? data.message : 'Please verify your OTP.';
+          Alert.alert('Not Verified', msg);
           navigation.navigate('OtpVerification', { email: email.trim().toLowerCase() });
-      } else {
-          Alert.alert('Login Failed', data?.message || error.message || 'Check your internet connection and try again.');
+          return;
       }
+
+      if (data) {
+          if (typeof data === 'string') {
+              errorMessage = `Server Error (${status}): Received HTML instead of JSON. Details: ${errorMessage}`;
+          } else if (data.message) {
+              errorMessage = typeof data.message === 'string' ? data.message : JSON.stringify(data.message);
+          }
+      }
+
+      Alert.alert('Login Failed', errorMessage);
     } finally {
       setLoading(false);
     }
