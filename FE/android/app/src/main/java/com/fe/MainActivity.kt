@@ -13,7 +13,7 @@ class MainActivity : ReactActivity() {
 
   // 🚨 Yahan onCreate method add kiya hai Security (FLAG_SECURE) ke liye
   override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
+    super.onCreate(null)
     
     // SECURE FLAG REMOVED for testing purposes
   }

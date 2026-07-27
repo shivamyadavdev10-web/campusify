@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Text, StyleSheet, Alert, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, TextInput } from 'react-native';
+import { Text, StyleSheet, Alert, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, TextInput, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { User, Phone, Mail, Lock } from 'lucide-react-native';
 import { AxiosError } from 'axios';
@@ -26,6 +26,7 @@ export default function RegisterScreen({ navigation }: any) {
   const confirmPasswordRef = useRef<TextInput>(null);
 
   const handleRegister = async () => {
+    Keyboard.dismiss();
     const validation = validateRegistrationForm(formData);
     if (!validation.isValid) {
       setErrors(validation.errors || {});
@@ -50,14 +51,14 @@ export default function RegisterScreen({ navigation }: any) {
     }
   };
 
-  // ✅ Memoized update function to prevent unnecessary re-renders of all inputs
-  const handleChange = useCallback((key: keyof typeof formData) => {
-    return (value: string) => setFormData(prev => ({ ...prev, [key]: value }));
-  }, []);
+  // ✅ Replaced factory function with standard function to avoid inline re-renders
+  const handleChange = (key: keyof typeof formData) => (value: string) => {
+    setFormData(prev => ({ ...prev, [key]: value }));
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardAvoid}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboardAvoid}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <Text style={styles.title}>Create Account</Text>
           <Text style={styles.subtitle}>Sign up to start learning today.</Text>

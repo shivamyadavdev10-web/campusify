@@ -109,7 +109,7 @@ export default function DownloadsScreen({ navigation }: { navigation: any }) {
       <View style={styles.content}>
         <FlatList
           data={downloads}
-          keyExtractor={(item, index) => item.id.toString() + index}
+          keyExtractor={(item) => item.id.toString()}
           renderItem={renderItem}
           contentContainerStyle={downloads.length > 0 ? styles.listContainer : styles.emptyContainer}
           showsVerticalScrollIndicator={false}

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, TouchableOpacity, TextInput, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DeviceInfo from 'react-native-device-info';
 import { Mail, Lock } from 'lucide-react-native';
@@ -22,6 +22,7 @@ export default function LoginScreen({ navigation }: any) {
   const passwordRef = useRef<TextInput>(null);
 
   const handleLogin = async () => {
+    Keyboard.dismiss();
     if (!email || !password) return Alert.alert('Validation Error', 'Please fill in all fields.');
 
     setLoading(true);
@@ -69,7 +70,7 @@ export default function LoginScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.content}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.content}>
         <Text style={styles.title}>Welcome Back</Text>
         <Text style={styles.subtitle}>Log in to continue your learning journey.</Text>
 

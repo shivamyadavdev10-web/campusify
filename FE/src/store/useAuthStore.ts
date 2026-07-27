@@ -76,12 +76,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await AsyncStorage.setItem('accessToken', safeToken);
       await AsyncStorage.setItem('refreshToken', safeRefreshToken);
       axiosClient.defaults.headers.common.Authorization = `Bearer ${safeToken}`;
-      set({ userToken: safeToken });
       
+      // Fetch profile BEFORE updating userToken so TabNavigator mounts with a valid profile
       const profileSuccess = await get().fetchUserProfile();
       if (!profileSuccess) {
         console.warn("Failed to fetch user profile after login");
       }
+
+      set({ userToken: safeToken });
     } catch (error: any) {
       console.error("Storage failed during login", error);
       throw new Error(error.message || "Storage/State update failed");

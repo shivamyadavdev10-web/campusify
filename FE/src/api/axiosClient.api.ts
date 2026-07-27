@@ -23,77 +23,61 @@ export const clearApiCache = () => {
   initPromise = null;
 };
 
-// Initialize cache from disk only once
+let cachedIsEmu: boolean | null = null;
+
+// Initialize cache safely
 const initializeCache = async (): Promise<void> => {
-  if (!cachedToken) {
-    cachedToken = await AsyncStorage.getItem('accessToken');
-  }
-  if (!cachedRefreshToken) {
-    cachedRefreshToken = await AsyncStorage.getItem('refreshToken');
-  }
-  if (!cachedDeviceId) {
-    cachedDeviceId = await DeviceInfo.getUniqueId();
-  }
+  try {
+    if (!cachedToken) cachedToken = await AsyncStorage.getItem('accessToken');
+  } catch (e) { console.error("Error reading token", e); }
+  
+  try {
+    if (!cachedRefreshToken) cachedRefreshToken = await AsyncStorage.getItem('refreshToken');
+  } catch (e) { console.error("Error reading refresh token", e); }
+  
+  try {
+    if (!cachedDeviceId) cachedDeviceId = await DeviceInfo.getUniqueId();
+  } catch (e) { console.error("Error reading device ID", e); }
+
+  try {
+    if (cachedIsEmu === null) cachedIsEmu = await DeviceInfo.isEmulator();
+  } catch (e) { console.error("Error reading emulator status", e); }
 };
 
 const getBaseUrl = () => {
-  // 🚀 JAB RENDER PAR DEPLOY HO JAYE, TOH NICHE WALA URL CHANGE KAREIN:
-  // Example: return 'https://campusify-api.onrender.com/api';
-  
-  const RENDER_URL = 'https://campusify-wowg.onrender.com/api'; // Live Render URL set kar diya gaya hai!
-
-  if (RENDER_URL) {
-    return RENDER_URL;
-  }
-
-  if (process.env.API_URL) {
-    return process.env.API_URL;
-  }
-  if (Platform.OS === 'android' && DeviceInfo.isEmulatorSync()) {
-    return 'http://10.0.2.2:5000/api';
-  }
-  // 📱 Local Wi-Fi IP for physical iOS & Android device testing fallback
+  const RENDER_URL = 'https://campusify-wowg.onrender.com/api';
+  if (RENDER_URL) return RENDER_URL;
+  if (process.env.API_URL) return process.env.API_URL;
+  if (Platform.OS === 'android' && DeviceInfo.isEmulatorSync()) return 'http://10.0.2.2:5000/api';
   return 'http://192.168.1.108:5000/api';
 };
 
 const axiosClient = axios.create({
   baseURL: getBaseUrl(), 
+  timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 });
 
 axiosClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
-  // If cache is empty, wait for the init promise. If it doesn't exist, create it.
-  if (!cachedToken || !cachedDeviceId) {
-    if (!initPromise) {
-      initPromise = initializeCache();
-    }
+  if (!cachedToken || !cachedDeviceId || cachedIsEmu === null) {
+    if (!initPromise) initPromise = initializeCache();
     await initPromise;
   }
 
-  if (cachedToken) {
-    config.headers.Authorization = `Bearer ${cachedToken}`;
-  }
-  if (cachedRefreshToken) {
-    config.headers['x-refresh-token'] = cachedRefreshToken;
-  }
-  if (cachedDeviceId) {
-    config.headers['x-device-id'] = cachedDeviceId;
-  }
-  
-  // 🚨 Add emulator detection header for backend DRM bypass logic
-  const isEmu = await DeviceInfo.isEmulator();
-  config.headers['x-is-emulator'] = isEmu ? 'true' : 'false';
+  if (cachedToken) config.headers.Authorization = `Bearer ${cachedToken}`;
+  if (cachedRefreshToken) config.headers['x-refresh-token'] = cachedRefreshToken;
+  if (cachedDeviceId) config.headers['x-device-id'] = cachedDeviceId;
+  if (cachedIsEmu !== null) config.headers['x-is-emulator'] = cachedIsEmu ? 'true' : 'false';
   
   return config;
 }, (error: AxiosError) => Promise.reject(error));
 
+let isAlertShown = false;
 
-
-// Intercept responses to catch newly issued tokens from the backend
 axiosClient.interceptors.response.use(
   async (res: AxiosResponse) => {
     const newAccessToken = res.headers['x-new-access-token'];
-    const newRefreshToken = res.headers['x-new-refresh-token']; // If backend sends it
+    const newRefreshToken = res.headers['x-new-refresh-token'];
 
     if (newAccessToken) {
       cachedToken = newAccessToken;
@@ -107,21 +91,31 @@ axiosClient.interceptors.response.use(
     return res;
   },
   async (err: AxiosError) => {
-    // Error handling block remains the same
     const status = err.response?.status;
     const data = err.response?.data as any;
 
     if (status === 403 && data?.message?.includes('another device')) {
       clearApiCache();
-      await AsyncStorage.removeItem('accessToken');
-      await AsyncStorage.removeItem('refreshToken');
-      Alert.alert("Session Expired", "Login from another device detected.");
+      await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
+      
+      // Clear Zustand store dynamically to prevent circular dependency
+      const { useAuthStore } = require('../store/useAuthStore');
+      useAuthStore.getState().logout();
+      
+      if (!isAlertShown) {
+        isAlertShown = true;
+        Alert.alert("Session Expired", "Login from another device detected.", [
+          { text: "OK", onPress: () => { isAlertShown = false; } }
+        ]);
+      }
     } else if (status === 401) {
-      // If we get an unauthorized error even after refresh attempt, flush cache
       clearApiCache();
-      await AsyncStorage.removeItem('accessToken');
-      await AsyncStorage.removeItem('refreshToken');
+      await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
+      
+      const { useAuthStore } = require('../store/useAuthStore');
+      useAuthStore.getState().logout();
     }
+    
     return Promise.reject(err);
   }
 );
