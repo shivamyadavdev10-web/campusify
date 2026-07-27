@@ -37,6 +37,15 @@ const initializeCache = async (): Promise<void> => {
 };
 
 const getBaseUrl = () => {
+  // 🚀 JAB RENDER PAR DEPLOY HO JAYE, TOH NICHE WALA URL CHANGE KAREIN:
+  // Example: return 'https://campusify-api.onrender.com/api';
+  
+  const RENDER_URL = 'https://campusify-wowg.onrender.com/api'; // Live Render URL set kar diya gaya hai!
+
+  if (RENDER_URL) {
+    return RENDER_URL;
+  }
+
   if (process.env.API_URL) {
     return process.env.API_URL;
   }
@@ -44,7 +53,7 @@ const getBaseUrl = () => {
     return 'http://10.0.2.2:5000/api';
   }
   // 📱 Local Wi-Fi IP for physical iOS & Android device testing fallback
-  return 'http://10.215.111.15:5000/api';
+  return 'http://192.168.1.108:5000/api';
 };
 
 const axiosClient = axios.create({

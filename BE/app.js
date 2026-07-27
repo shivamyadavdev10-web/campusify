@@ -12,6 +12,9 @@ import ApiError from "./src/utils/apiError.utils.js";
 import adminRoutes from "./src/routes/admin.routes.js"; 
 const app = express();
 
+// Trust proxy for Render load balancer to pass correct IP to express-rate-limit
+app.set('trust proxy', 1);
+
 // ==========================================
 // 2. GLOBAL MIDDLEWARES (Security & Parsing)
 // ==========================================
