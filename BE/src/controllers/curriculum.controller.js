@@ -57,7 +57,7 @@ export const getContents = catchAsync(async (req, res) => {
         if (isUnlocked && actualKey) {
             if (actualKey.startsWith('http')) {
                 finalUrl = actualKey; // Direct link (e.g. external PDF)
-            } else if (item.contentType === 'video' || item.type === 'video') {
+            } else if (item.type === 'video') {
                 bunnyVideoId = actualKey; // Only send bunnyVideoId for videos
             } else {
                 finalUrl = `/uploads/${actualKey}`;
@@ -67,7 +67,7 @@ export const getContents = catchAsync(async (req, res) => {
         return {
             _id: item._id,
             title: item.title,
-            type: item.contentType || item.type, // Fallback support for your schema
+            type: item.type, // Fallback support for your schema
             category: item.category, // e.g., "Notes", "VVIMP QB"
             unit: item.unit, // e.g., "Unit 1"
             duration: item.duration,
@@ -164,7 +164,7 @@ export const getTrendingCourses = catchAsync(async (req, res) => {
 // 🎁 Free Demo Lectures - Shows latest 10 free videos/contents
 export const getFreeContents = catchAsync(async (req, res) => {
     const contents = await Content.find({ isFree: true })
-        .select('+fileKey +awsFileKey')
+        .select('+fileKey')
         .populate({
             path: 'subjectId',
             select: 'name semesterId'
@@ -180,7 +180,7 @@ export const getFreeContents = catchAsync(async (req, res) => {
         if (actualKey) {
             if (actualKey.startsWith('http')) {
                 finalUrl = actualKey;
-            } else if (item.contentType === 'video' || item.type === 'video') {
+            } else if (item.type === 'video') {
                 bunnyVideoId = actualKey;
             } else {
                 finalUrl = `/uploads/${actualKey}`;
@@ -190,7 +190,7 @@ export const getFreeContents = catchAsync(async (req, res) => {
         return {
             _id: item._id,
             title: item.title,
-            type: item.contentType || item.type,
+            type: item.type,
             duration: item.duration,
             isFree: item.isFree,
             fileUrl: finalUrl,
@@ -204,12 +204,12 @@ export const getFreeContents = catchAsync(async (req, res) => {
 
 // 🎥 Fetch Single Content Signed URL (Fallback for Video Player)
 export const getSingleContentUrl = catchAsync(async (req, res) => {
-    const content = await Content.findById(req.params.contentId).select('+fileKey +awsFileKey');
+    const content = await Content.findById(req.params.contentId).select('+fileKey');
     if (!content) throw new ApiError(404, "Content not found");
     
     let finalUrl = null;
     let bunnyVideoId = null;
-    const actualKey = content.fileKey || content.awsFileKey;
+    const actualKey = content.fileKey;
     
     if (actualKey) {
         if (actualKey.startsWith('http')) {

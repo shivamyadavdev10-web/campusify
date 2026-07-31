@@ -77,6 +77,17 @@ export const isLoggedIn = async (req, res, next) => {
       return res.status(401).json({ status: false, message: "User no longer exists." });
     }
 
+    // 🛑 5.5 BAN CHECK
+    if (currentUser.isBanned) {
+      const now = new Date();
+      if (!currentUser.banUntil || currentUser.banUntil > now) {
+        return res.status(403).json({ 
+          status: false, 
+          message: `Your account has been suspended. Reason: ${currentUser.banReason || 'Policy violation'}.` 
+        });
+      }
+    }
+
     // 🛑 6. NETFLIX SECURITY: The Ultimate Device Kick-Out
     if (incomingDeviceId && currentUser.currentDevice?.deviceId) {
       if (currentUser.currentDevice.deviceId !== incomingDeviceId) {

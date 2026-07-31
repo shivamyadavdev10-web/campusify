@@ -5,6 +5,7 @@ import {
 } from "../controllers/curriculum.controller.js";
 import { getStreamUrl } from "../controllers/bunny.controller.js";
 import { isLoggedIn } from "../middleware/isLoggedIn.middleware.js";
+import checkEnrollment from "../middleware/checkEnrollment.middleware.js";
 import { apiLimiter } from "../middleware/rateLimit.middleware.js";
 
 const router = express.Router();
@@ -22,7 +23,9 @@ router.get("/branches", getBranches);
 router.get("/courses/trending", getTrendingCourses);
 router.get("/contents/free", getFreeContents);
 router.get("/content-url/:contentId", isLoggedIn, getSingleContentUrl);
-router.get("/stream-url/:contentId", isLoggedIn, getStreamUrl);
+
+// 🔒 PAID ROUTE: Check enrollment before generating stream URL
+router.get("/stream-url/:contentId", isLoggedIn, checkEnrollment, getStreamUrl);
 
 router.get("/search", isLoggedIn, searchCurriculum);
 

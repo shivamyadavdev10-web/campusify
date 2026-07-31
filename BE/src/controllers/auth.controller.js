@@ -336,16 +336,25 @@ export const resetPassword = catchAsync(async (req, res) => {
 // 7. LOGOUT USER
 // ==========================================
 export const logout = catchAsync(async (req, res) => {
-  const token = req.cookies.refreshToken;
-  if (!token) throw new ApiError(401, "Unauthorized");
+  const token = req.cookies?.refreshToken || req.header("x-refresh-token") || req.header("Authorization")?.replace("Bearer ", "");
+  
+  if (!token) {
+    res.clearCookie("accessToken");
+    res.clearCookie("refreshToken");
+    return res.status(200).json({ status: true, message: "Logged out successfully" });
+  }
 
-  const refreshDecoded = jwt.verify(token, process.env.REFRESHTOKEN_SECRET);
-  const user = await User.findById(refreshDecoded.id);
+  try {
+    const refreshDecoded = jwt.verify(token, process.env.REFRESHTOKEN_SECRET);
+    const user = await User.findById(refreshDecoded.id);
 
-  if (user) {
-    user.refreshToken = undefined;
-    user.currentDevice = undefined; 
-    await user.save();
+    if (user) {
+      user.refreshToken = undefined;
+      user.currentDevice = undefined; 
+      await user.save();
+    }
+  } catch (error) {
+    // If token is invalid/expired, still clear cookies and return 200
   }
 
   res.clearCookie("accessToken");

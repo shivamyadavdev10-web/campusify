@@ -140,6 +140,15 @@ export const bulkStudentUpload = catchAsync(async (req, res) => {
         }
     }
     
+    // Cleanup temp CSV file
+    try {
+        if (req.file && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
+    } catch (e) {
+        console.error('Error cleaning up CSV file', e);
+    }
+
     res.status(200).json({ 
         status: true, 
         message: "Bulk upload processed", 
@@ -171,7 +180,7 @@ export const reorderSubjects = catchAsync(async (req, res) => {
     
     // bulkWrite is the most efficient way to update multiple documents concurrently
     const bulkOps = orderedIds.map((id, index) => ({
-        updateOne: { filter: { _id: id }, update: { orderIndex: index } }
+        updateOne: { filter: { _id: id }, update: { $set: { orderSequence: index } } }
     }));
     await Subject.bulkWrite(bulkOps);
     
@@ -218,7 +227,8 @@ export const uploadCourseContent = catchAsync(async (req, res) => {
 
             // Use Bunny Video ID as the fileKey
             finalFileKey = videoId;
-            fileUrl = `https://${process.env.BUNNY_STREAM_HOSTNAME}/${videoId}/playlist.m3u8`;
+            const hostname = (process.env.BUNNY_STREAM_HOSTNAME || '').replace(/^https?:\/\//, '').trim();
+            fileUrl = `https://${hostname}/${videoId}/playlist.m3u8`;
 
         } catch (error) {
             console.error("FULL UPLOAD ERROR:", error.response ? error.response.data : error.message);

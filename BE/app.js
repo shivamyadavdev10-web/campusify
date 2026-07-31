@@ -18,9 +18,20 @@ app.set('trust proxy', 1);
 // ==========================================
 // 2. GLOBAL MIDDLEWARES (Security & Parsing)
 // ==========================================
+const ALLOWED_ORIGINS = [
+    'https://campusifyplus.in',
+    'https://admin.campusifyplus.in',
+    'http://localhost:3000',
+    'http://localhost:8081', // React Native Expo web
+];
+
 app.use(cors({
     origin: function (origin, callback) {
-        callback(null, origin || true);
+        if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
     },
     credentials: true, // Browser ko Cookies accept karne ki permission
     exposedHeaders: ['x-new-access-token', 'x-new-refresh-token'] // 🔑 Allow Frontend to read new tokens
@@ -39,7 +50,7 @@ import authRoutes from "./src/routes/auth.routes.js";
 import userRoutes from "./src/routes/user.routes.js";
 import curriculumRoutes from "./src/routes/curriculum.routes.js";
 import contentRoutes from "./src/routes/content.routes.js";
-
+import paymentRoutes from "./src/routes/payment.routes.js";
 
 // ==========================================
 // 4. ROUTE DECLARATIONS (Mounting)
@@ -49,6 +60,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/curriculum", curriculumRoutes);
 app.use("/api/admin", adminRoutes); 
 app.use("/api/content", contentRoutes);
+app.use("/api/payment", paymentRoutes);
 
 
 

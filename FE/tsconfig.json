@@ -1,25 +1,10 @@
 {
-  "extends": "@react-native/typescript-config",
+  "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "types": ["jest"],
-    "baseUrl": ".",
+    "strict": true,
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./*"]
     }
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "App.tsx",
-    "index.js",
-    "__tests__/**/*.ts",
-    "__tests__/**/*.tsx"
-  ],
-  "exclude": [
-    "node_modules",
-    "**/node_modules/*",
-    "ios",
-    "android",
-    "**/Pods"
-  ]
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "nativewind-env.d.ts"]
 }
