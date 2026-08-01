@@ -61,12 +61,14 @@ export default function FeedScreen() {
     itemVisiblePercentThreshold: 50,
   }).current;
 
-  // FIX: Memoize getItemLayout for fixed-height items to skip measurement passes
+  // FIX: Use stable windowHeight (not mutable containerHeight) so getItemLayout
+  // never has stale offsets during the first render before onLayout fires.
+  // The difference is negligible on real devices (status bar height).
   const getItemLayout = useCallback((_: any, index: number) => ({
-    length: containerHeight,
-    offset: containerHeight * index,
+    length: windowHeight,
+    offset: windowHeight * index,
     index,
-  }), [containerHeight]);
+  }), []); // No dependency — windowHeight is a constant
 
   if (loading) {
     return (
@@ -145,7 +147,7 @@ const VideoItem = memo(({ item, isActive, shouldRenderVideo, height, width }: {
 
   const fetchStreamUrl = async (contentId: string) => {
     try {
-      const response = await axiosClient.get(`/curriculum/stream-url/${contentId}`);
+      const response = await axiosClient.get(`/curriculum/free-stream-url/${contentId}`);
       if (response.data?.success && response.data?.videoUrl) {
         setStreamUrl(response.data.videoUrl);
       } else if (response.data?.status && response.data?.fileUrl) {

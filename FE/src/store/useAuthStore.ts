@@ -1,35 +1,50 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import * as Application from 'expo-application';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { axiosClient } from '../api/axiosClient';
 
 // ==========================================
-// 🔐 Device ID Generator (Persistent & Unique per device)
+// 🔐 Device ID Generator — Expo Go + Standalone Compatible
 // ==========================================
+// WHY: Application.getAndroidId() returns NULL in Expo Go (only works in standalone builds).
+// If we let it fall through to a random fallback, a new ID is generated on every restart,
+// which triggers the backend's device-switch penalty on every login. Fix: use
+// Constants.sessionId / installationId as a stable source in Expo Go, and persist
+// whatever we generate in SecureStore so it survives restarts.
 const getDeviceId = async (): Promise<string> => {
   try {
-    // Try to read a previously persisted device ID first
+    // Step 1: Check if we already generated and persisted a stable ID
     const stored = await SecureStore.getItemAsync('campusify_device_id');
     if (stored) return stored;
 
-    // Generate a new one from native device identifiers
-    let deviceId: string;
+    // Step 2: Try native device identifiers (works in standalone builds)
+    let deviceId: string | null = null;
 
     if (Platform.OS === 'android') {
-      // Android ID is unique per device per app signing key
-      deviceId = Application.getAndroidId() || `android-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    } else {
-      // iOS: Use a UUID that persists until app reinstall
-      deviceId = await Application.getIosIdForVendorAsync() || `ios-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      deviceId = Application.getAndroidId(); // null in Expo Go, real ID in prod
+    } else if (Platform.OS === 'ios') {
+      deviceId = await Application.getIosIdForVendorAsync();
     }
 
-    // Persist so it survives app restarts and SecureStore is consistent
+    // Step 3: If native ID is unavailable (Expo Go), build a stable ID from
+    // Constants.deviceName (phone name, e.g. "Shiv's Android") + platform.
+    // This is not cryptographically unique but is stable per device install.
+    if (!deviceId) {
+      const deviceName = Constants.deviceName || 'unknown';
+      const base = `${Platform.OS}-${deviceName}-campusify`;
+      // We'll store this so it's consistent across restarts
+      deviceId = base.replace(/\s+/g, '_').toLowerCase();
+    }
+
+    // Step 4: Persist so it survives restarts — this is the most important step.
+    // On the next call, Step 1 will return immediately from SecureStore.
     await SecureStore.setItemAsync('campusify_device_id', deviceId);
     return deviceId;
   } catch {
-    // Fallback: If SecureStore fails (e.g., on first boot), generate a temp ID
-    return `fallback-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    // Last resort fallback
+    return `fallback-${Platform.OS}-${Date.now()}`;
   }
 };
 
@@ -54,6 +69,7 @@ interface AuthState {
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   fetchProfile: () => Promise<void>;
+  getDeviceId: () => Promise<string>; // Expose for verifyOTP screen
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -61,48 +77,54 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: true,
   user: null,
 
+  // Expose getDeviceId so other screens (e.g. verifyOTP) can call it
+  getDeviceId,
+
   login: async (email, password) => {
     try {
-      // FIX: Generate a real device ID instead of sending platform: 'web'
-      // This enables the backend's Netflix-style device lock & anti-sharing system
       const deviceId = await getDeviceId();
+      console.log('📱 Login with deviceId:', deviceId);
 
-      const response = await axiosClient.post('/auth/login', { 
-        email, 
-        password,
-        deviceId,
-        // platform is intentionally NOT sent, so backend defaults to 'app'
-        // which enforces the device-binding security logic
-      }, {
-        headers: {
-          'x-device-id': deviceId, // Also in header for middleware pickup
+      const response = await axiosClient.post(
+        '/auth/login',
+        { email, password, deviceId },
+        {
+          headers: {
+            // IMPORTANT: x-device-id is sent ONLY on login, not on every API call.
+            // The isLoggedIn middleware only checks device on login, so sending it
+            // on every request would cause 403s when Expo Go generates a new session.
+            'x-device-id': deviceId,
+          },
         }
-      });
+      );
 
       const token = response.data?.accessToken;
-      if (!token) throw new Error("No access token returned from server");
+      const refreshToken = response.data?.refreshToken;
+      if (!token) throw new Error('No access token returned from server');
 
       await SecureStore.setItemAsync('jwt_token', token);
+      if (refreshToken) {
+        await SecureStore.setItemAsync('refresh_token', refreshToken);
+      }
       set({ token });
 
       // Fetch user profile immediately after login
       await get().fetchProfile();
     } catch (error: any) {
-      // Extract the ApiError message from backend if available
-      const message = error.response?.data?.message || 'Login failed. Please try again.';
+      const message =
+        error.response?.data?.message || 'Login failed. Please try again.';
       throw new Error(message);
     }
   },
 
   logout: async () => {
     try {
-      // Best effort backend logout call (fire-and-forget)
       await axiosClient.post('/auth/logout').catch(() => {});
     } catch {
       // Silently ignore network errors during logout
     } finally {
-      // Always clear local state regardless of backend response
       await SecureStore.deleteItemAsync('jwt_token').catch(() => {});
+      await SecureStore.deleteItemAsync('refresh_token').catch(() => {});
       set({ token: null, user: null });
     }
   },
@@ -112,7 +134,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const token = await SecureStore.getItemAsync('jwt_token');
       if (token) {
         set({ token, isLoading: false });
-        // Background fetch profile data if token exists
+        // Background fetch — non-fatal
         get().fetchProfile().catch(() => {});
       } else {
         set({ token: null, isLoading: false });
@@ -136,11 +158,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             phoneNo: d.phoneNo,
             accountType: d.accountType,
             totalPurchased: d.totalPurchased,
-          }
+          },
         });
       }
     } catch {
-      // Profile fetch failure is non-fatal; token might be expired
+      // Profile fetch failure is non-fatal
       // The 401 interceptor in axiosClient will handle logout if needed
     }
   },

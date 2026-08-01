@@ -224,6 +224,19 @@ export const getSingleContentUrl = catchAsync(async (req, res) => {
     res.status(200).json({ status: true, fileUrl: finalUrl, bunnyVideoId });
 });
 
+// 🎥 Stream URL for free content
+export const getFreeStreamUrl = catchAsync(async (req, res) => {
+    const content = await Content.findById(req.params.contentId).select('+fileKey');
+    if (!content) throw new ApiError(404, "Content not found");
+    if (!content.isFree) throw new ApiError(403, "This content requires enrollment");
+    
+    // Return bunny stream URL for free content
+    const bunnyVideoId = content.fileKey;
+    const streamUrl = `https://${process.env.BUNNY_STREAM_HOSTNAME}/${bunnyVideoId}/playlist.m3u8`;
+    
+    res.status(200).json({ success: true, videoUrl: streamUrl });
+});
+
 // 🖼️ Fetch Active Banner for Home Screen
 export const getBanner = catchAsync(async (req, res) => {
     // Only return the latest active banner (or limit 1)

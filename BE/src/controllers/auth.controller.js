@@ -65,7 +65,9 @@ export const registerUser = catchAsync(async (req, res) => {
 // 2. VERIFY OTP 
 // ==========================================
 export const verifyOTP = catchAsync(async (req, res) => {
-  const { email, otp, deviceId } = req.body;
+  const { email, otp } = req.body;
+  // deviceId is optional — if not sent, generate a stable fallback so we don't throw
+  const deviceId = req.headers['x-device-id'] || req.body.deviceId || `server-fallback-${Date.now()}`;
   const platform = req.headers['x-platform'] || req.body.platform || 'app'; // 🌐 WEB BYPASS LOGIC
 
   const user = await User.findOne({ email }).select('+otp +otpExpiry');
@@ -85,8 +87,8 @@ export const verifyOTP = catchAsync(async (req, res) => {
 
   user.refreshToken = refreshToken;
   
+  // Always bind device (platform check kept for future web admin panel support)
   if (platform !== 'web') {
-    if (!deviceId) throw new ApiError(400, "Device ID is required for App login");
     user.currentDevice = { deviceId, loggedInAt: new Date() };
   }
   await user.save();

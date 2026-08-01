@@ -1,7 +1,7 @@
 import express from "express";
 import {
     getBranches, getSemesters, getSubjects, getContents, searchCurriculum,
-    getTrendingCourses, getFreeContents, getSingleContentUrl, getBanner
+    getTrendingCourses, getFreeContents, getSingleContentUrl, getFreeStreamUrl, getBanner
 } from "../controllers/curriculum.controller.js";
 import { getStreamUrl } from "../controllers/bunny.controller.js";
 import { isLoggedIn } from "../middleware/isLoggedIn.middleware.js";
@@ -23,6 +23,9 @@ router.get("/branches", getBranches);
 router.get("/courses/trending", getTrendingCourses);
 router.get("/contents/free", getFreeContents);
 router.get("/content-url/:contentId", isLoggedIn, getSingleContentUrl);
+
+// 🟢 PUBLIC: Stream URL for free content only
+router.get("/free-stream-url/:contentId", isLoggedIn, getFreeStreamUrl);
 
 // 🔒 PAID ROUTE: Check enrollment before generating stream URL
 router.get("/stream-url/:contentId", isLoggedIn, checkEnrollment, getStreamUrl);

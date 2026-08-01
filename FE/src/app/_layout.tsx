@@ -4,6 +4,9 @@ import { View, ActivityIndicator } from 'react-native';
 import { useAuthStore } from '../store/useAuthStore';
 import '../../global.css';
 
+// Export ErrorBoundary to catch rendering errors globally
+export { ErrorBoundary } from 'expo-router';
+
 // Prevent the splash screen from auto-hiding until we've determined auth state.
 // FIX: This eliminates the brief flash of the wrong route group during app startup.
 SplashScreen.preventAutoHideAsync();

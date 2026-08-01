@@ -27,11 +27,14 @@ const ALLOWED_ORIGINS = [
 
 app.use(cors({
     origin: function (origin, callback) {
-        if (!origin || ALLOWED_ORIGINS.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
+        // Allow requests with no origin (mobile apps, curl, Postman, React Native)
+        if (!origin) {
+            return callback(null, true);
         }
+        if (ALLOWED_ORIGINS.includes(origin)) {
+            return callback(null, true);
+        }
+        callback(new Error('Not allowed by CORS'));
     },
     credentials: true, // Browser ko Cookies accept karne ki permission
     exposedHeaders: ['x-new-access-token', 'x-new-refresh-token'] // 🔑 Allow Frontend to read new tokens
@@ -66,7 +69,14 @@ app.use("/api/payment", paymentRoutes);
 
 
 // ==========================================
-// 5. 404 ROUTE CATCHER
+// 5. HEALTH CHECK (For UptimeRobot — prevents Render free tier sleep)
+// ==========================================
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// ==========================================
+// 6. 404 ROUTE CATCHER
 // ==========================================
 // Agar koi hacker aisi API hit kare jo hai hi nahi
 app.all("*", (req, res, next) => {
