@@ -232,9 +232,11 @@ export const getFreeStreamUrl = catchAsync(async (req, res) => {
     
     // Return bunny stream URL for free content
     const bunnyVideoId = content.fileKey;
-    const streamUrl = `https://${process.env.BUNNY_STREAM_HOSTNAME}/${bunnyVideoId}/playlist.m3u8`;
+    const hostname = (process.env.BUNNY_STREAM_HOSTNAME || '').replace(/^https?:\/\//, '');
+    const videoUrl = `https://${hostname}/${bunnyVideoId}/playlist.m3u8`;
+    const videoDirectUrl = `https://${hostname}/${bunnyVideoId}/play_720p.mp4`;
     
-    res.status(200).json({ success: true, videoUrl: streamUrl });
+    res.status(200).json({ success: true, videoUrl, videoDirectUrl });
 });
 
 // 🖼️ Fetch Active Banner for Home Screen

@@ -56,3 +56,31 @@ export const getMyPayments = catchAsync(async (req, res) => {
         payments 
     });
 });
+
+// ==========================================
+// 3. CHANGE PASSWORD (Authenticated)
+// ==========================================
+export const changePassword = catchAsync(async (req, res) => {
+    const { newPassword, confirmNewPassword } = req.body;
+    
+    if (!newPassword || !confirmNewPassword) {
+        throw new ApiError(400, "Please provide newPassword and confirmNewPassword");
+    }
+    
+    if (newPassword !== confirmNewPassword) {
+        throw new ApiError(400, "Passwords do not match");
+    }
+    
+    const user = await User.findById(req.user._id);
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+    
+    user.password = newPassword;
+    await user.save();
+    
+    res.status(200).json({
+        status: true,
+        message: "Password updated successfully"
+    });
+});

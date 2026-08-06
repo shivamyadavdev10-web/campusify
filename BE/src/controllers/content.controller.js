@@ -16,9 +16,11 @@ export const getStreamUrl = async (req, res) => {
     }
 
     // Generate standard HLS URL (No token authentication)
-    const videoUrl = `https://${process.env.BUNNY_STREAM_HOSTNAME}/${content.fileKey}/playlist.m3u8`;
+    const hostname = (process.env.BUNNY_STREAM_HOSTNAME || '').replace(/^https?:\/\//, '');
+    const videoUrl = `https://${hostname}/${content.fileKey}/playlist.m3u8`;
+    const videoDirectUrl = `https://${hostname}/${content.fileKey}/play_720p.mp4`;
 
-    return res.status(200).json({ success: true, videoUrl });
+    return res.status(200).json({ success: true, videoUrl, videoDirectUrl });
   } catch (error) {
     console.error("Error generating stream URL:", error);
     return res.status(500).json({ success: false, message: "Internal server error" });

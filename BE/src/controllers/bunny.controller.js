@@ -30,11 +30,13 @@ export const getStreamUrl = async (req, res) => {
         // 2. Construct standard raw video URL
         // fileKey contains the Bunny Video ID
         const videoUrl = `https://${hostname}/${content.fileKey}/playlist.m3u8`;
+        const videoDirectUrl = `https://${hostname}/${content.fileKey}/play_720p.mp4`;
 
         // 3. Return to the frontend
         return res.status(200).json({
             success: true,
-            videoUrl
+            videoUrl,
+            videoDirectUrl
         });
 
     } catch (error) {

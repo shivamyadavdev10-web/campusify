@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Home, User } from 'lucide-react-native';
+import { Home, GraduationCap, User } from 'lucide-react-native';
 
 export default function TabsLayout() {
   return (
@@ -7,32 +7,32 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#121212',
-          borderTopColor: '#1f2937',
-          paddingBottom: 5,
-          paddingTop: 5,
-          height: 60,
+          backgroundColor: '#ffffff',
+          borderTopColor: '#e5e7eb',
         },
-        tabBarActiveTintColor: '#6366f1',
-        tabBarInactiveTintColor: '#9ca3af',
+        tabBarActiveTintColor: '#2563eb',
+        tabBarInactiveTintColor: '#737686',
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Feed',
-          tabBarIcon: ({ color, size }) => (
-            <Home color={color} size={size} />
-          ),
+          title: 'Home',
+          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="my-courses"
+        options={{
+          title: 'My Courses',
+          tabBarIcon: ({ color, size }) => <GraduationCap color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <User color={color} size={size} />
-          ),
+          tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
         }}
       />
     </Tabs>

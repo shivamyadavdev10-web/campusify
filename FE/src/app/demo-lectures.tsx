@@ -1,0 +1,146 @@
+import React, { useState, useCallback } from 'react';
+import { View, Text, FlatList, TouchableOpacity, Platform, Modal, ActivityIndicator } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/src/core/api/client';
+import { Skeleton } from '@/src/components/ui/Skeleton';
+import { ErrorState } from '@/src/components/ui/ErrorState';
+import { EmptyState } from '@/src/components/ui/EmptyState';
+import { Stack } from 'expo-router';
+import { PlayCircle, Clock, Video, BookOpen } from 'lucide-react-native';
+import VideoPlayer from '@/src/features/video/components/VideoPlayer';
+
+const cardShadow = Platform.select({
+  ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3 },
+  android: { elevation: 2 },
+  default: {},
+});
+
+export default function DemoLecturesScreen() {
+  const [activeVideo, setActiveVideo] = useState<{ url: string; directUrl?: string; title: string } | null>(null);
+  const [fetchingVideo, setFetchingVideo] = useState(false);
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['free-contents'],
+    queryFn: () => apiClient.get('/curriculum/contents/free').then(res => res.data),
+  });
+
+  const freeContents = (data?.contents || []).filter((c: any) => c.type === 'video');
+
+  const handlePlayVideo = useCallback(async (content: any) => {
+    setFetchingVideo(true);
+    try {
+      const res = await apiClient.get(`/curriculum/free-stream-url/${content._id}`);
+      if (res.data?.videoUrl) {
+        setActiveVideo({ url: res.data.videoUrl, directUrl: res.data.videoDirectUrl, title: content.title });
+      }
+    } catch (err: any) {
+      console.error('Failed to load video:', err);
+    } finally {
+      setFetchingVideo(false);
+    }
+  }, []);
+
+  if (isError) return <ErrorState message="Failed to load demo lectures" onRetry={refetch} />;
+
+  return (
+    <View className="flex-1 bg-background">
+      <Stack.Screen options={{ title: 'Demo Lectures' }} />
+
+      {/* Header banner */}
+      <View className="bg-[#22c55e] mx-4 mt-4 mb-2 rounded-2xl px-5 py-4" style={{ elevation: 4 }}>
+        <View className="flex-row items-center mb-1">
+          <PlayCircle color="#ffffff" size={20} />
+          <Text className="text-white text-lg font-bold ml-2">Free Demo Lectures</Text>
+        </View>
+        <Text className="text-white/80 text-[13px]">
+          Watch free video lectures before you buy
+        </Text>
+      </View>
+
+      {isLoading ? (
+        <View className="px-4 pt-4" style={{ gap: 12 }}>
+          <Skeleton width="100%" height={80} borderRadius={16} />
+          <Skeleton width="100%" height={80} borderRadius={16} />
+          <Skeleton width="100%" height={80} borderRadius={16} />
+        </View>
+      ) : (
+        <FlatList
+          data={freeContents}
+          keyExtractor={item => item._id}
+          contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 32 }}
+          ListEmptyComponent={<EmptyState message="No free demo lectures available right now" />}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              className="bg-surface-container-lowest border border-outline-variant rounded-[16px] overflow-hidden active:scale-[0.98]"
+              style={cardShadow}
+              onPress={() => handlePlayVideo(item)}
+            >
+              <View className="flex-row items-center p-4">
+                <View className="w-[48px] h-[48px] rounded-[14px] bg-[#f0fdf4] border border-[#dcfce7] items-center justify-center mr-3">
+                  <Video color="#22c55e" size={22} strokeWidth={2} />
+                </View>
+                <View className="flex-1 mr-2">
+                  <Text className="text-on-surface font-semibold text-[15px] mb-1" numberOfLines={2}>
+                    {item.title}
+                  </Text>
+                  <View className="flex-row items-center flex-wrap" style={{ gap: 8 }}>
+                    {item.subjectId?.name && (
+                      <View className="flex-row items-center">
+                        <BookOpen color="#737686" size={11} />
+                        <Text className="text-on-surface-variant text-[11px] ml-1">{item.subjectId.name}</Text>
+                      </View>
+                    )}
+                    {item.duration && (
+                      <View className="flex-row items-center">
+                        <Clock color="#737686" size={11} />
+                        <Text className="text-on-surface-variant text-[11px] ml-1">{item.duration}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+                <View className="bg-[#22c55e] w-[40px] h-[40px] rounded-full items-center justify-center">
+                  <PlayCircle color="#ffffff" size={20} fill="#22c55e" />
+                </View>
+              </View>
+            </TouchableOpacity>
+          )}
+        />
+      )}
+
+      {/* Video Player Modal */}
+      <Modal
+        visible={!!activeVideo || fetchingVideo}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setActiveVideo(null)}
+      >
+        <View className="flex-1 bg-black justify-center">
+          {fetchingVideo ? (
+            <View className="items-center">
+              <ActivityIndicator size="large" color="#22c55e" />
+              <Text className="text-white mt-3 text-sm">Loading video…</Text>
+            </View>
+          ) : activeVideo ? (
+            <>
+              <VideoPlayer
+                streamUrl={activeVideo.url}
+                directUrl={activeVideo.directUrl}
+                isActive={true}
+                onClose={() => setActiveVideo(null)}
+              />
+              <View className="px-5 py-4">
+                <Text className="text-white font-bold text-base">{activeVideo.title}</Text>
+                <View className="flex-row items-center mt-1">
+                  <View className="bg-[#22c55e]/20 px-2 py-0.5 rounded-full">
+                    <Text className="text-[#22c55e] text-[11px] font-bold">FREE DEMO</Text>
+                  </View>
+                </View>
+              </View>
+            </>
+          ) : null}
+        </View>
+      </Modal>
+    </View>
+  );
+}
