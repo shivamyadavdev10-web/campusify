@@ -1,171 +1,102 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, TouchableOpacity, ActivityIndicator, Text, StyleSheet } from 'react-native';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
-import { useAppState } from '@/src/hooks/useAppState';
+import { WebView } from 'react-native-webview';
 import { X } from 'lucide-react-native';
+import { getBunnyEmbedUrl } from '@/src/core/config/bunny';
 
 interface VideoPlayerProps {
-  streamUrl: string;
-  directUrl?: string;
-  posterUrl?: string;
+  bunnyVideoId?: string;
   isActive: boolean;
   onClose?: () => void;
 }
 
-export default function VideoPlayer({ streamUrl, directUrl, posterUrl, isActive, onClose }: VideoPlayerProps) {
-  const videoRef = useRef<Video>(null);
-  const [isBuffering, setIsBuffering] = useState(true);
+export default function VideoPlayer({ bunnyVideoId, isActive, onClose }: VideoPlayerProps) {
+  const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('Failed to load video');
-  const [usingFallback, setUsingFallback] = useState(false);
-  const [hasStartedPlaying, setHasStartedPlaying] = useState(false);
-  const loadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const appState = useAppState();
 
-  // The URL currently being played
-  const currentUrl = usingFallback && directUrl ? directUrl : streamUrl;
+  // Fallback if bunnyVideoId is missing
+  if (!bunnyVideoId) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.overlay}>
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorTitle}>Video Not Found</Text>
+          <Text style={styles.errorMsg}>This video does not have a valid Bunny ID.</Text>
+        </View>
+        {onClose && (
+          <TouchableOpacity style={styles.closeBtn} onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <X color="#ffffff" size={20} />
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  }
 
-  // Clear timeout helper
-  const clearLoadTimeout = useCallback(() => {
-    if (loadTimeoutRef.current) {
-      clearTimeout(loadTimeoutRef.current);
-      loadTimeoutRef.current = null;
-    }
+  const embedUrl = getBunnyEmbedUrl(bunnyVideoId);
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html><head>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { background: #000; width: 100%; height: 100%; overflow: hidden; }
+        iframe { width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; }
+      </style>
+    </head><body>
+      <iframe 
+        src="${embedUrl}" 
+        loading="eager" 
+        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen" 
+        allowfullscreen="true"
+        style="border:none;">
+      </iframe>
+    </body></html>
+  `;
+
+  const handleRetry = useCallback(() => {
+    setHasError(false);
+    setIsLoading(true);
   }, []);
 
-  // Fallback to MP4 direct URL
-  const switchToFallback = useCallback(async () => {
-    if (usingFallback || !directUrl) {
-      // Already on fallback or no fallback available — show error
-      setHasError(true);
-      setErrorMessage('Video could not be loaded. Please try again later.');
-      setIsBuffering(false);
-      return;
-    }
-    
-    console.log('[VideoPlayer] HLS failed, switching to MP4 fallback:', directUrl);
-    setUsingFallback(true);
-    setHasError(false);
-    setIsBuffering(true);
-    setHasStartedPlaying(false);
-    
-    try {
-      await videoRef.current?.unloadAsync();
-      await videoRef.current?.loadAsync({ uri: directUrl }, { shouldPlay: true });
-    } catch {
-      setHasError(true);
-      setErrorMessage('Video could not be loaded. Please try again later.');
-      setIsBuffering(false);
-    }
-  }, [usingFallback, directUrl]);
-
-  // Loading timeout: if video doesn't start within 15s, try fallback
-  useEffect(() => {
-    if (isActive && !hasStartedPlaying && !hasError) {
-      clearLoadTimeout();
-      loadTimeoutRef.current = setTimeout(() => {
-        if (!hasStartedPlaying) {
-          console.log('[VideoPlayer] Loading timeout reached, attempting fallback...');
-          switchToFallback();
-        }
-      }, 15000);
-    }
-    
-    return clearLoadTimeout;
-  }, [isActive, hasStartedPlaying, hasError, clearLoadTimeout, switchToFallback]);
-
-  // Pause video when app goes to background
-  useEffect(() => {
-    if (appState !== 'active') {
-      videoRef.current?.pauseAsync();
-    }
-  }, [appState]);
-
-  // Pause when not active (modal closed, etc.)
-  useEffect(() => {
-    if (!isActive) {
-      videoRef.current?.pauseAsync();
-    }
-  }, [isActive]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      clearLoadTimeout();
-      videoRef.current?.unloadAsync();
-    };
-  }, [clearLoadTimeout]);
-
-  const onPlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
-    if (!status.isLoaded) {
-      if (status.error) {
-        console.error('[VideoPlayer] Playback error:', status.error);
-        switchToFallback();
-      }
-      return;
-    }
-    
-    // Video has started playing successfully
-    if (status.isPlaying && !hasStartedPlaying) {
-      setHasStartedPlaying(true);
-      clearLoadTimeout();
-    }
-    
-    setIsBuffering(status.isBuffering ?? false);
-    setHasError(false);
-  }, [hasStartedPlaying, switchToFallback, clearLoadTimeout]);
-
-  const handleRetry = useCallback(async () => {
-    // Reset everything and try from the beginning (HLS first)
-    setHasError(false);
-    setIsBuffering(true);
-    setUsingFallback(false);
-    setHasStartedPlaying(false);
-    setErrorMessage('Failed to load video');
-    
-    try {
-      await videoRef.current?.unloadAsync();
-      await videoRef.current?.loadAsync({ uri: streamUrl }, { shouldPlay: true });
-    } catch {
-      switchToFallback();
-    }
-  }, [streamUrl, switchToFallback]);
+  if (!isActive) return null;
 
   return (
-    <View className="w-full aspect-video bg-black relative">
-      <Video
-        ref={videoRef}
-        style={StyleSheet.absoluteFillObject}
-        source={{ uri: currentUrl }}
-        useNativeControls
-        resizeMode={ResizeMode.CONTAIN}
-        isLooping={false}
-        shouldPlay={isActive}
-        onPlaybackStatusUpdate={onPlaybackStatusUpdate}
-        posterSource={posterUrl ? { uri: posterUrl } : undefined}
-        usePoster={!!posterUrl}
-      />
+    <View style={styles.container}>
+      {!hasError && (
+        <WebView
+          key={hasError ? 'retry' : 'initial'}
+          source={{ html: htmlContent }}
+          style={styles.webview}
+          allowsFullscreenVideo={true}
+          allowsInlineMediaPlayback={true}
+          mediaPlaybackRequiresUserAction={false}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          startInLoadingState={false}
+          onLoadStart={() => setIsLoading(true)}
+          onLoadEnd={() => setIsLoading(false)}
+          onError={() => { setHasError(true); setIsLoading(false); }}
+          onHttpError={() => { setHasError(true); setIsLoading(false); }}
+        />
+      )}
 
-      {/* Buffering indicator */}
-      {isBuffering && !hasError && (
-        <View className="absolute inset-0 items-center justify-center bg-black/40">
-          <ActivityIndicator size="large" color="#6366f1" />
-          {usingFallback && (
-            <Text className="text-white/70 text-xs mt-2">Loading direct stream…</Text>
-          )}
+      {/* Loading overlay */}
+      {isLoading && !hasError && (
+        <View style={styles.overlay}>
+          <ActivityIndicator size="large" color="#818cf8" />
+          <Text style={styles.loadingText}>Loading video…</Text>
         </View>
       )}
 
-      {/* Error state with retry */}
+      {/* Error state */}
       {hasError && (
-        <View className="absolute inset-0 items-center justify-center bg-black/80">
-          <Text className="text-red-500 text-base font-bold mb-1">Playback Error</Text>
-          <Text className="text-white/60 text-xs mb-4 px-8 text-center">{errorMessage}</Text>
-          <TouchableOpacity
-            className="bg-[#6366f1] px-6 py-2.5 rounded-lg"
-            onPress={handleRetry}
-          >
-            <Text className="text-white font-bold">Retry</Text>
+        <View style={styles.overlay}>
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorTitle}>Playback Error</Text>
+          <Text style={styles.errorMsg}>Could not load this video. Please check your connection and try again.</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={handleRetry} activeOpacity={0.8}>
+            <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -173,9 +104,10 @@ export default function VideoPlayer({ streamUrl, directUrl, posterUrl, isActive,
       {/* Close button */}
       {onClose && (
         <TouchableOpacity
-          className="absolute top-4 right-4 bg-black/60 w-9 h-9 rounded-full items-center justify-center z-10"
+          style={styles.closeBtn}
           onPress={onClose}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
           <X color="#ffffff" size={20} />
         </TouchableOpacity>
@@ -183,3 +115,73 @@ export default function VideoPlayer({ streamUrl, directUrl, posterUrl, isActive,
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    backgroundColor: '#000',
+    position: 'relative',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  webview: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 13,
+    marginTop: 12,
+    fontWeight: '500',
+  },
+  errorIcon: {
+    fontSize: 36,
+    marginBottom: 12,
+  },
+  errorTitle: {
+    color: '#f87171',
+    fontSize: 17,
+    fontWeight: 'bold',
+    marginBottom: 6,
+  },
+  errorMsg: {
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontSize: 13,
+    textAlign: 'center',
+    paddingHorizontal: 40,
+    marginBottom: 20,
+    lineHeight: 18,
+  },
+  retryBtn: {
+    backgroundColor: '#6366f1',
+    paddingHorizontal: 28,
+    paddingVertical: 11,
+    borderRadius: 10,
+  },
+  retryText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+});

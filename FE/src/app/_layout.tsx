@@ -6,7 +6,14 @@ import { queryClient } from '@/src/core/api/queryClient';
 import { useAuthStore } from '@/src/core/stores/auth.store';
 import { View, ActivityIndicator } from 'react-native';
 import ToastRenderer from '@/src/components/ui/ToastRenderer';
+import { useNetInfo } from '@react-native-community/netinfo';
+import * as Sentry from '@sentry/react-native';
 import '../../global.css';
+
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN || '',
+  tracesSampleRate: 1.0,
+});
 
 // Export ErrorBoundary to catch rendering errors globally
 export { ErrorBoundary } from 'expo-router';
@@ -14,10 +21,12 @@ export { ErrorBoundary } from 'expo-router';
 // Prevent the splash screen from auto-hiding until we've determined auth state.
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+function RootLayout() {
   const { token, isLoading, checkAuth } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
+  const netInfo = useNetInfo();
+  const isOffline = netInfo.type !== 'unknown' && netInfo.isInternetReachable === false;
 
   useEffect(() => {
     checkAuth();
@@ -113,7 +122,14 @@ export default function RootLayout() {
 
         {/* Global Toast Notification — rendered above everything */}
         <ToastRenderer />
+        {isOffline && (
+          <View style={{ backgroundColor: '#ef4444', padding: 10, alignItems: 'center', justifyContent: 'center', position: 'absolute', bottom: 80, left: 20, right: 20, borderRadius: 12, zIndex: 9999, elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 }}>
+            <Text style={{ color: 'white', fontWeight: 'bold' }}>⚠️ No Internet Connection</Text>
+          </View>
+        )}
       </QueryClientProvider>
     </SafeAreaProvider>
   );
 }
+
+export default Sentry.wrap(RootLayout);

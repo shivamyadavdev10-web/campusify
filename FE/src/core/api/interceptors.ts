@@ -72,6 +72,22 @@ export const setupInterceptors = (axiosInstance: AxiosInstance) => {
       const hasToken = authStore.getState().token;
 
       if (status === 401 && hasToken) {
+        // RACE CONDITION FIX:
+        // If multiple requests are sent simultaneously when the token is expired,
+        // the first request rotates the token, and subsequent requests fail with 401
+        // because their refresh token is now invalid in the database.
+        // We check if the token used for this failed request is older than our current token.
+        const tokenUsed = (error.config?.headers?.Authorization as string)?.replace('Bearer ', '');
+        const currentToken = authStore.getState().token;
+        
+        if (tokenUsed && currentToken && tokenUsed !== currentToken) {
+           // Another request already refreshed the token! Retry this request with the new token.
+           if (error.config) {
+             error.config.headers.Authorization = `Bearer ${currentToken}`;
+             return axiosInstance.request(error.config);
+           }
+        }
+
         // 401 = definitively not authenticated.
         // The backend middleware already tried to auto-refresh using the refresh token.
         // If we still got 401, BOTH tokens are invalid → force logout.

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Platform, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Platform, Modal, ActivityIndicator, StyleSheet } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/src/core/api/client';
 import { Skeleton } from '@/src/components/ui/Skeleton';
@@ -16,8 +16,7 @@ const cardShadow = Platform.select({
 });
 
 export default function DemoLecturesScreen() {
-  const [activeVideo, setActiveVideo] = useState<{ url: string; directUrl?: string; title: string } | null>(null);
-  const [fetchingVideo, setFetchingVideo] = useState(false);
+  const [activeVideo, setActiveVideo] = useState<{ bunnyVideoId: string; title: string } | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['free-contents'],
@@ -26,17 +25,9 @@ export default function DemoLecturesScreen() {
 
   const freeContents = (data?.contents || []).filter((c: any) => c.type === 'video');
 
-  const handlePlayVideo = useCallback(async (content: any) => {
-    setFetchingVideo(true);
-    try {
-      const res = await apiClient.get(`/curriculum/free-stream-url/${content._id}`);
-      if (res.data?.videoUrl) {
-        setActiveVideo({ url: res.data.videoUrl, directUrl: res.data.videoDirectUrl, title: content.title });
-      }
-    } catch (err: any) {
-      console.error('Failed to load video:', err);
-    } finally {
-      setFetchingVideo(false);
+  const handlePlayVideo = useCallback((content: any) => {
+    if (content.bunnyVideoId) {
+      setActiveVideo({ bunnyVideoId: content.bunnyVideoId, title: content.title });
     }
   }, []);
 
@@ -109,38 +100,38 @@ export default function DemoLecturesScreen() {
 
       {/* Video Player Modal */}
       <Modal
-        visible={!!activeVideo || fetchingVideo}
+        visible={!!activeVideo}
         transparent
         animationType="fade"
         statusBarTranslucent
         onRequestClose={() => setActiveVideo(null)}
       >
-        <View className="flex-1 bg-black justify-center">
-          {fetchingVideo ? (
-            <View className="items-center">
-              <ActivityIndicator size="large" color="#22c55e" />
-              <Text className="text-white mt-3 text-sm">Loading video…</Text>
-            </View>
-          ) : activeVideo ? (
+        <View style={modalStyles.bg}>
+          {activeVideo && (
             <>
               <VideoPlayer
-                streamUrl={activeVideo.url}
-                directUrl={activeVideo.directUrl}
+                bunnyVideoId={activeVideo.bunnyVideoId}
                 isActive={true}
                 onClose={() => setActiveVideo(null)}
               />
-              <View className="px-5 py-4">
-                <Text className="text-white font-bold text-base">{activeVideo.title}</Text>
-                <View className="flex-row items-center mt-1">
-                  <View className="bg-[#22c55e]/20 px-2 py-0.5 rounded-full">
-                    <Text className="text-[#22c55e] text-[11px] font-bold">FREE DEMO</Text>
-                  </View>
+              <View style={modalStyles.titleBar}>
+                <Text style={modalStyles.title}>{activeVideo.title}</Text>
+                <View style={modalStyles.freeBadge}>
+                  <Text style={modalStyles.freeText}>FREE DEMO</Text>
                 </View>
               </View>
             </>
-          ) : null}
+          )}
         </View>
       </Modal>
     </View>
   );
 }
+
+const modalStyles = StyleSheet.create({
+  bg: { flex: 1, backgroundColor: '#000', justifyContent: 'center' },
+  titleBar: { paddingHorizontal: 20, paddingVertical: 16 },
+  title: { color: '#f3f4f6', fontWeight: 'bold', fontSize: 16 },
+  freeBadge: { backgroundColor: 'rgba(34, 197, 94, 0.15)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start', marginTop: 8 },
+  freeText: { color: '#22c55e', fontSize: 11, fontWeight: 'bold' },
+});

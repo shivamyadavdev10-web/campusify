@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/src/core/api/client';
 import { useAuthStore } from '@/src/core/stores/auth.store';
+import { useUIStore } from '@/src/core/stores/ui.store';
 import { Skeleton } from '@/src/components/ui/Skeleton';
 import { ErrorState } from '@/src/components/ui/ErrorState';
 import { getInitials } from '@/src/utils/helpers.utils';
@@ -11,6 +12,7 @@ import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
   const { logout } = useAuthStore();
+  const { showToast } = useUIStore();
   const router = useRouter();
   
   const { data: profileData, isLoading: profileLoading, isError: profileError, refetch: refetchProfile } = useQuery({
@@ -75,6 +77,7 @@ export default function ProfileScreen() {
 
       <TouchableOpacity 
         className="bg-surface-container-lowest rounded-3xl p-4 flex-row items-center justify-between shadow-sm mb-8 border border-outline-variant active:scale-95 transition-transform"
+        onPress={() => showToast('Payments module coming soon', 'info')}
       >
         <View className="flex-row items-center">
           <View className="w-[42px] h-[42px] rounded-full bg-[#f0f5ff] flex items-center justify-center mr-4">

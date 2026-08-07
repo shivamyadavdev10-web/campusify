@@ -28,8 +28,7 @@ export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState<'branches' | 'trending' | 'demo'>('branches');
 
   // Video player state for demo lectures
-  const [activeVideo, setActiveVideo] = useState<{ url: string; directUrl?: string; title: string } | null>(null);
-  const [fetchingVideo, setFetchingVideo] = useState(false);
+  const [activeVideo, setActiveVideo] = useState<{ bunnyVideoId: string; title: string } | null>(null);
 
   // Fetch branches
   const { data: branchesData, isLoading: branchesLoading, isError: branchesError, error: branchesQueryError, refetch: refetchBranches } = useQuery({
@@ -57,18 +56,10 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [refetchBranches, refetchTrending, refetchFree]);
 
-  // Play free/demo video
-  const handlePlayDemoVideo = useCallback(async (content: any) => {
-    setFetchingVideo(true);
-    try {
-      const res = await apiClient.get(`/curriculum/free-stream-url/${content._id}`);
-      if (res.data?.videoUrl) {
-        setActiveVideo({ url: res.data.videoUrl, directUrl: res.data.videoDirectUrl, title: content.title });
-      }
-    } catch (err: any) {
-      console.error('Failed to load demo video:', err);
-    } finally {
-      setFetchingVideo(false);
+  // Play free/demo video — use bunnyVideoId directly, no API call needed
+  const handlePlayDemoVideo = useCallback((content: any) => {
+    if (content.bunnyVideoId) {
+      setActiveVideo({ bunnyVideoId: content.bunnyVideoId, title: content.title });
     }
   }, []);
 
@@ -441,23 +432,17 @@ export default function HomeScreen() {
 
       {/* ═══════ Video Player Modal for Demo Lectures ═══════ */}
       <Modal
-        visible={!!activeVideo || fetchingVideo}
+        visible={!!activeVideo}
         transparent
         animationType="fade"
         statusBarTranslucent
         onRequestClose={() => setActiveVideo(null)}
       >
         <View className="flex-1 bg-black justify-center">
-          {fetchingVideo ? (
-            <View className="items-center">
-              <ActivityIndicator size="large" color="#22c55e" />
-              <Text className="text-white mt-3 text-sm">Loading demo lecture…</Text>
-            </View>
-          ) : activeVideo ? (
+          {activeVideo ? (
             <>
               <VideoPlayer
-                streamUrl={activeVideo.url}
-                directUrl={activeVideo.directUrl}
+                bunnyVideoId={activeVideo.bunnyVideoId}
                 isActive={true}
                 onClose={() => setActiveVideo(null)}
               />

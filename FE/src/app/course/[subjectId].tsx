@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, FlatList, Modal, Linking, Text, TouchableOpacity } from 'react-native';
+import { View, FlatList, Modal, Linking, Text, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/src/core/api/client';
@@ -9,7 +9,7 @@ import { ErrorState } from '@/src/components/ui/ErrorState';
 import { EmptyState } from '@/src/components/ui/EmptyState';
 import UnitSection from '@/src/features/curriculum/components/UnitSection';
 import VideoPlayer from '@/src/features/video/components/VideoPlayer';
-import { Lock, BookOpen, X } from 'lucide-react-native';
+import { Lock, BookOpen, X, ShieldCheck } from 'lucide-react-native';
 import { Content } from '@/src/types/curriculum.types';
 
 export default function CourseContentScreen() {
@@ -17,8 +17,7 @@ export default function CourseContentScreen() {
   const { showToast } = useUIStore();
   const navigation = useNavigation();
 
-  const [activeVideo, setActiveVideo] = useState<{ url: string; directUrl?: string } | null>(null);
-  const [fetchingVideo, setFetchingVideo] = useState(false);
+  const [activeVideo, setActiveVideo] = useState<{ contentId?: string; bunnyVideoId?: string; title: string } | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['contents', subjectId],
@@ -39,7 +38,7 @@ export default function CourseContentScreen() {
     return Array.from(unitMap.entries()).map(([unitName, items]) => ({ unitName, contents: items }));
   }, [contents]);
 
-  const handleContentPress = useCallback(async (content: Content) => {
+  const handleContentPress = useCallback((content: Content) => {
     // Gate: locked content that isn't free and semester isn't purchased
     if (content.isLocked && !content.isFree && !isSemesterPurchased) {
       showToast('🔒 Purchase this semester to unlock all content', 'warning');
@@ -58,26 +57,12 @@ export default function CourseContentScreen() {
     }
 
     if (content.type === 'video') {
-      setFetchingVideo(true);
-      try {
-        // Free content uses the public free-stream-url endpoint
-        // Paid (purchased) content uses the authenticated stream-url endpoint
-        const endpoint = content.isFree
-          ? `/curriculum/free-stream-url/${content._id}`
-          : `/curriculum/stream-url/${content._id}`;
-
-        const res = await apiClient.get(endpoint);
-
-        if (res.data?.videoUrl) {
-          setActiveVideo({ url: res.data.videoUrl, directUrl: res.data.videoDirectUrl });
-        } else {
-          showToast('Stream URL not available', 'error');
-        }
-      } catch (err: any) {
-        const msg = err?.response?.data?.message || 'Failed to load video';
-        showToast(msg, 'error');
-      } finally {
-        setFetchingVideo(false);
+      if (content.bunnyVideoId || content._id) {
+        // If semester is purchased, we should fetch signed URL via backend using contentId
+        // If free, we can also use contentId since backend handles free-stream-url or fallback to bunnyVideoId
+        setActiveVideo({ contentId: content._id, bunnyVideoId: content.bunnyVideoId, title: content.title });
+      } else {
+        showToast('Video not available yet', 'info');
       }
     }
   }, [isSemesterPurchased, showToast]);
@@ -89,11 +74,11 @@ export default function CourseContentScreen() {
   // ── Loading ──────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <View className="flex-1 bg-[#121212] p-4" style={{ gap: 12 }}>
-        <Skeleton width="100%" height={56} borderRadius={12} />
-        <Skeleton width="100%" height={56} borderRadius={12} />
-        <Skeleton width="100%" height={56} borderRadius={12} />
-        <Skeleton width="80%" height={56} borderRadius={12} />
+      <View style={styles.loadingContainer}>
+        <Skeleton width="100%" height={56} borderRadius={16} />
+        <Skeleton width="100%" height={56} borderRadius={16} />
+        <Skeleton width="100%" height={56} borderRadius={16} />
+        <Skeleton width="80%" height={56} borderRadius={16} />
       </View>
     );
   }
@@ -103,16 +88,19 @@ export default function CourseContentScreen() {
   }
 
   return (
-    <View className="flex-1 bg-[#121212]">
+    <View style={styles.screen}>
+      <StatusBar barStyle="light-content" />
 
       {/* Purchase banner for non-purchased semesters */}
       {!isSemesterPurchased && (
         <TouchableOpacity
           activeOpacity={0.85}
-          className="mx-4 mt-3 mb-1 bg-[#6366f1]/10 border border-[#6366f1]/30 rounded-xl px-4 py-3 flex-row items-center"
+          style={styles.purchaseBanner}
         >
-          <Lock color="#6366f1" size={16} />
-          <Text className="text-[#a5b4fc] text-sm font-medium ml-2 flex-1">
+          <View style={styles.purchaseIconWrap}>
+            <ShieldCheck color="#a5b4fc" size={18} />
+          </View>
+          <Text style={styles.purchaseText}>
             Purchase this semester to unlock all videos & notes
           </Text>
         </TouchableOpacity>
@@ -122,11 +110,11 @@ export default function CourseContentScreen() {
       <FlatList
         data={units}
         keyExtractor={item => item.unitName}
-        contentContainerStyle={{ padding: 16, paddingBottom: 40, gap: 10 }}
+        contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <EmptyState
-            icon={<BookOpen color="#6366f1" size={48} />}
+            icon={<BookOpen color="#818cf8" size={48} />}
             title="No Content Yet"
             description="Content for this subject will appear here once uploaded"
           />
@@ -144,28 +132,90 @@ export default function CourseContentScreen() {
 
       {/* Full-screen video modal */}
       <Modal
-        visible={!!activeVideo || fetchingVideo}
+        visible={!!activeVideo}
         transparent
         animationType="fade"
         statusBarTranslucent
         onRequestClose={closeVideo}
       >
-        <View className="flex-1 bg-black justify-center">
-          {fetchingVideo ? (
-            <View className="items-center">
-              <Text className="text-white mb-3">Loading stream…</Text>
-              <View className="w-8 h-8 rounded-full border-2 border-[#6366f1] border-t-transparent animate-spin" />
-            </View>
-          ) : activeVideo ? (
-            <VideoPlayer
-              streamUrl={activeVideo.url}
-              directUrl={activeVideo.directUrl}
-              isActive={true}
-              onClose={closeVideo}
-            />
-          ) : null}
+        <View style={styles.modalBg}>
+          {activeVideo && (
+            <>
+              <VideoPlayer
+                bunnyVideoId={activeVideo.bunnyVideoId}
+                isActive={true}
+                onClose={closeVideo}
+              />
+              {/* Video title bar below player */}
+              <View style={styles.videoTitleBar}>
+                <Text style={styles.videoTitle} numberOfLines={2}>{activeVideo.title}</Text>
+              </View>
+            </>
+          )}
         </View>
       </Modal>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#0f0f1a',
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#0f0f1a',
+    padding: 16,
+    gap: 12,
+  },
+  purchaseBanner: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.2)',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  purchaseIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  purchaseText: {
+    color: '#a5b4fc',
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
+    lineHeight: 18,
+  },
+  listContainer: {
+    padding: 16,
+    paddingBottom: 40,
+    gap: 12,
+  },
+  modalBg: {
+    flex: 1,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+  },
+  videoTitleBar: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  videoTitle: {
+    color: '#f3f4f6',
+    fontWeight: 'bold',
+    fontSize: 16,
+    letterSpacing: 0.2,
+  },
+});
