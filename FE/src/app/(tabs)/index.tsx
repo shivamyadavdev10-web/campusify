@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Platform, Modal, ActivityIndicator } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/src/core/api/client';
@@ -21,6 +21,17 @@ const cardShadowMd = Platform.select({
   android: { elevation: 4 },
   default: {},
 });
+
+// Crash-safe wrapper: if VideoPlayer throws, shows error UI instead of crashing app
+class VideoErrorBoundary extends Component<{ children: ReactNode; onError: () => void }, { hasError: boolean }> {
+  state = { hasError: false };
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error: Error, info: ErrorInfo) { console.warn('VideoPlayer error:', error, info); this.props.onError(); }
+  render() {
+    if (this.state.hasError) return null; // onError already closes the modal
+    return this.props.children;
+  }
+}
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -468,8 +479,8 @@ export default function HomeScreen() {
         onRequestClose={() => setActiveVideo(null)}
       >
         <View className="flex-1 bg-black justify-center">
-          {activeVideo ? (
-            <>
+          {activeVideo && activeVideo.bunnyVideoId ? (
+            <VideoErrorBoundary onError={() => setActiveVideo(null)}>
               <VideoPlayer
                 bunnyVideoId={activeVideo.bunnyVideoId}
                 isActive={true}
@@ -483,7 +494,7 @@ export default function HomeScreen() {
                   </View>
                 </View>
               </View>
-            </>
+            </VideoErrorBoundary>
           ) : null}
         </View>
       </Modal>

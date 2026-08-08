@@ -1,30 +1,41 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { View, TouchableOpacity, ActivityIndicator, Text, StyleSheet } from 'react-native';
-import { WebView } from 'react-native-webview';
-import { X } from 'lucide-react-native';
-import { getBunnyEmbedUrl } from '@/src/core/config/bunny';
+import { WebView, WebViewNavigation } from 'react-native-webview';
+import { X, WifiOff, AlertTriangle } from 'lucide-react-native';
+import { getBunnyEmbedUrl, BUNNY_LIBRARY_ID } from '@/src/core/config/bunny';
 
 interface VideoPlayerProps {
-  bunnyVideoId?: string;
+  bunnyVideoId?: string | null;
   isActive: boolean;
   onClose?: () => void;
 }
 
+const MAX_RETRIES = 3;
+
 export default function VideoPlayer({ bunnyVideoId, isActive, onClose }: VideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [errorType, setErrorType] = useState<'network' | 'http' | null>(null);
   const retryCount = useRef(0);
-  // Fallback if bunnyVideoId is missing
-  if (!bunnyVideoId) {
+  const isRetrying = useRef(false);
+
+  // ── GUARD: Never render WebView with invalid ID ───────────────────────
+  if (!bunnyVideoId || bunnyVideoId === 'null' || bunnyVideoId === 'undefined') {
     return (
       <View style={styles.container}>
         <View style={styles.overlay}>
-          <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorTitle}>Video Not Found</Text>
-          <Text style={styles.errorMsg}>This video does not have a valid Bunny ID.</Text>
+          <Text style={styles.errorIcon}>🎬</Text>
+          <Text style={styles.errorTitle}>Video Unavailable</Text>
+          <Text style={styles.errorMsg}>
+            This video is not yet available.{'\n'}Please check back later.
+          </Text>
         </View>
         {onClose && (
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <TouchableOpacity
+            style={styles.closeBtn}
+            onPress={onClose}
+            hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+          >
             <X color="#ffffff" size={20} />
           </TouchableOpacity>
         )}
@@ -32,57 +43,107 @@ export default function VideoPlayer({ bunnyVideoId, isActive, onClose }: VideoPl
     );
   }
 
+  if (!isActive) return null;
+
   const embedUrl = getBunnyEmbedUrl(bunnyVideoId);
 
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html><head>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { background: #000; width: 100%; height: 100%; overflow: hidden; }
-        iframe { width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; }
-      </style>
-    </head><body>
-      <iframe 
-        src="${embedUrl}" 
-        loading="eager" 
-        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen" 
-        allowfullscreen="true"
-        style="border:none;">
-      </iframe>
-    </body></html>
-  `;
+  const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { background: #000; width: 100%; height: 100%; overflow: hidden; }
+    iframe {
+      width: 100%; height: 100%;
+      border: none;
+      position: absolute;
+      top: 0; left: 0;
+    }
+  </style>
+</head>
+<body>
+  <iframe
+    src="${embedUrl}"
+    loading="eager"
+    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
+    allowfullscreen="true"
+    referrerpolicy="no-referrer-when-downgrade"
+    style="border:none;">
+  </iframe>
+</body>
+</html>`;
 
   const handleRetry = useCallback(() => {
+    if (isRetrying.current) return; // debounce rapid taps
+    if (retryCount.current >= MAX_RETRIES) {
+      // Max retries hit — tell user to contact support
+      return;
+    }
+    isRetrying.current = true;
     retryCount.current += 1;
     setHasError(false);
+    setErrorType(null);
     setIsLoading(true);
+    // Small delay so WebView has time to unmount cleanly
+    setTimeout(() => { isRetrying.current = false; }, 500);
   }, []);
 
-  if (!isActive) return null;
+  const handleError = useCallback(() => {
+    setHasError(true);
+    setErrorType('network');
+    setIsLoading(false);
+  }, []);
+
+  const handleHttpError = useCallback((e: any) => {
+    setHasError(true);
+    setErrorType('http');
+    setIsLoading(false);
+  }, []);
+
+  // Block any navigation that tries to leave the Bunny embed domain
+  const handleShouldStartLoad = useCallback((request: WebViewNavigation) => {
+    const { url } = request;
+    if (
+      url.startsWith('about:') ||
+      url.includes('iframe.mediadelivery.net') ||
+      url.includes('mediadelivery.net') ||
+      url.startsWith('blob:')
+    ) {
+      return true;
+    }
+    // Block external navigation — prevents crash from redirect loops
+    return false;
+  }, []);
+
+  const reachedMaxRetries = retryCount.current >= MAX_RETRIES;
 
   return (
     <View style={styles.container}>
       {!hasError && (
         <WebView
-          key={`player-${retryCount.current}`}
+          key={`player-${bunnyVideoId}-${retryCount.current}`}
           source={{ html: htmlContent }}
           style={styles.webview}
+          // ── Playback ──────────────────────────────────────────────
           allowsFullscreenVideo={true}
           allowsInlineMediaPlayback={true}
           mediaPlaybackRequiresUserAction={false}
+          // ── Security / Compat ─────────────────────────────────────
           javaScriptEnabled={true}
           domStorageEnabled={true}
           mixedContentMode="compatibility"
           allowsProtectedMedia={true}
           originWhitelist={['*']}
           setSupportMultipleWindows={false}
+          // ── Navigation guard ──────────────────────────────────────
+          onShouldStartLoadWithRequest={handleShouldStartLoad}
+          // ── Lifecycle ─────────────────────────────────────────────
           startInLoadingState={false}
           onLoadStart={() => setIsLoading(true)}
           onLoadEnd={() => setIsLoading(false)}
-          onError={() => { setHasError(true); setIsLoading(false); }}
-          onHttpError={() => { setHasError(true); setIsLoading(false); }}
+          onError={handleError}
+          onHttpError={handleHttpError}
         />
       )}
 
@@ -97,22 +158,45 @@ export default function VideoPlayer({ bunnyVideoId, isActive, onClose }: VideoPl
       {/* Error state */}
       {hasError && (
         <View style={styles.overlay}>
-          <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorTitle}>Playback Error</Text>
-          <Text style={styles.errorMsg}>Could not load this video. Please check your connection and try again.</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={handleRetry} activeOpacity={0.8}>
-            <Text style={styles.retryText}>Retry</Text>
-          </TouchableOpacity>
+          {errorType === 'network' ? (
+            <WifiOff color="#f87171" size={40} />
+          ) : (
+            <AlertTriangle color="#f87171" size={40} />
+          )}
+          <Text style={styles.errorTitle} numberOfLines={1}>
+            {errorType === 'network' ? 'No Internet' : 'Video Not Found'}
+          </Text>
+          <Text style={styles.errorMsg}>
+            {errorType === 'network'
+              ? 'Check your connection and try again.'
+              : 'This video could not be loaded.\nIt may not be processed yet.'}
+          </Text>
+
+          {reachedMaxRetries ? (
+            <Text style={styles.maxRetryMsg}>
+              Too many retries. Please close and try again later.
+            </Text>
+          ) : (
+            <TouchableOpacity
+              style={styles.retryBtn}
+              onPress={handleRetry}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.retryText}>
+                Retry ({MAX_RETRIES - retryCount.current} left)
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
-      {/* Close button */}
+      {/* Close button — always visible */}
       {onClose && (
         <TouchableOpacity
           style={styles.closeBtn}
           onPress={onClose}
           activeOpacity={0.7}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
         >
           <X color="#ffffff" size={20} />
         </TouchableOpacity>
@@ -127,7 +211,6 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
     backgroundColor: '#000',
     position: 'relative',
-    borderRadius: 12,
     overflow: 'hidden',
   },
   webview: {
@@ -136,33 +219,34 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    backgroundColor: 'rgba(0,0,0,0.92)',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 32,
   },
   loadingText: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: 'rgba(255,255,255,0.6)',
     fontSize: 13,
     marginTop: 12,
     fontWeight: '500',
   },
   errorIcon: {
-    fontSize: 36,
+    fontSize: 38,
     marginBottom: 12,
   },
   errorTitle: {
     color: '#f87171',
     fontSize: 17,
     fontWeight: 'bold',
+    marginTop: 12,
     marginBottom: 6,
   },
   errorMsg: {
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: 'rgba(255,255,255,0.5)',
     fontSize: 13,
     textAlign: 'center',
-    paddingHorizontal: 40,
     marginBottom: 20,
-    lineHeight: 18,
+    lineHeight: 19,
   },
   retryBtn: {
     backgroundColor: '#6366f1',
@@ -175,18 +259,24 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
   },
+  maxRetryMsg: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 12,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
   closeBtn: {
     position: 'absolute',
     top: 12,
     right: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: 'rgba(255,255,255,0.18)',
   },
 });

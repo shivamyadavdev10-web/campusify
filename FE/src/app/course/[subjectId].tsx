@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, Component, ErrorInfo, ReactNode } from 'react';
 import { View, FlatList, Modal, Linking, Text, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -11,6 +11,35 @@ import UnitSection from '@/src/features/curriculum/components/UnitSection';
 import VideoPlayer from '@/src/features/video/components/VideoPlayer';
 import { Lock, BookOpen, X, ShieldCheck } from 'lucide-react-native';
 import { Content } from '@/src/types/curriculum.types';
+
+// ErrorBoundary to prevent video player crashes from taking down the app
+class VideoErrorBoundary extends Component<{ children: ReactNode; onError: () => void }, { hasError: boolean }> {
+  state = { hasError: false };
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.warn('VideoPlayer crashed:', error, errorInfo);
+    this.props.onError();
+  }
+  reset() { this.setState({ hasError: false }); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+          <Text style={{ color: '#f87171', fontSize: 36, marginBottom: 12 }}>⚠️</Text>
+          <Text style={{ color: '#f87171', fontSize: 17, fontWeight: 'bold', marginBottom: 6 }}>Player Crashed</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center', marginBottom: 20 }}>Something went wrong. Please close and try again.</Text>
+          <TouchableOpacity
+            style={{ backgroundColor: '#6366f1', paddingHorizontal: 28, paddingVertical: 11, borderRadius: 10 }}
+            onPress={this.props.onError}
+          >
+            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function CourseContentScreen() {
   const { subjectId } = useLocalSearchParams<{ subjectId: string }>();
@@ -64,12 +93,12 @@ export default function CourseContentScreen() {
     }
 
     if (content.type === 'video') {
-      if (content.bunnyVideoId || content._id) {
-        // If semester is purchased, we should fetch signed URL via backend using contentId
-        // If free, we can also use contentId since backend handles free-stream-url or fallback to bunnyVideoId
+      if (content.bunnyVideoId) {
         setActiveVideo({ contentId: content._id, bunnyVideoId: content.bunnyVideoId, title: content.title });
+      } else if (content.isLocked) {
+        showToast('🔒 Purchase this semester to watch this video', 'warning');
       } else {
-        showToast('Video not available yet', 'info');
+        showToast('Video not available yet. Please try again later.', 'info');
       }
     }
   }, [isSemesterPurchased, showToast]);
@@ -148,7 +177,7 @@ export default function CourseContentScreen() {
       >
         <View style={styles.modalBg}>
           {activeVideo && (
-            <>
+            <VideoErrorBoundary onError={closeVideo}>
               <VideoPlayer
                 bunnyVideoId={activeVideo.bunnyVideoId}
                 isActive={true}
@@ -158,7 +187,7 @@ export default function CourseContentScreen() {
               <View style={styles.videoTitleBar}>
                 <Text style={styles.videoTitle} numberOfLines={2}>{activeVideo.title}</Text>
               </View>
-            </>
+            </VideoErrorBoundary>
           )}
         </View>
       </Modal>

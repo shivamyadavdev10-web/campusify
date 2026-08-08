@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Platform, Modal, ActivityIndicator, StyleSheet } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/src/core/api/client';
@@ -8,6 +8,18 @@ import { EmptyState } from '@/src/components/ui/EmptyState';
 import { Stack } from 'expo-router';
 import { PlayCircle, Clock, Video, BookOpen } from 'lucide-react-native';
 import VideoPlayer from '@/src/features/video/components/VideoPlayer';
+import { useUIStore } from '@/src/core/stores/ui.store';
+
+// Crash-safe ErrorBoundary for VideoPlayer
+class VideoErrorBoundary extends Component<{ children: ReactNode; onError: () => void }, { hasError: boolean }> {
+  state = { hasError: false };
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error: Error, info: ErrorInfo) { console.warn('VideoPlayer error:', error, info); this.props.onError(); }
+  render() {
+    if (this.state.hasError) return null;
+    return this.props.children;
+  }
+}
 
 const cardShadow = Platform.select({
   ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3 },
@@ -17,6 +29,7 @@ const cardShadow = Platform.select({
 
 export default function DemoLecturesScreen() {
   const [activeVideo, setActiveVideo] = useState<{ bunnyVideoId: string; title: string } | null>(null);
+  const { showToast } = useUIStore();
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['free-contents'],
@@ -28,8 +41,10 @@ export default function DemoLecturesScreen() {
   const handlePlayVideo = useCallback((content: any) => {
     if (content.bunnyVideoId) {
       setActiveVideo({ bunnyVideoId: content.bunnyVideoId, title: content.title });
+    } else {
+      showToast('This video is not available yet', 'info');
     }
-  }, []);
+  }, [showToast]);
 
   if (isError) return <ErrorState message="Failed to load demo lectures" onRetry={refetch} />;
 
@@ -107,8 +122,8 @@ export default function DemoLecturesScreen() {
         onRequestClose={() => setActiveVideo(null)}
       >
         <View style={modalStyles.bg}>
-          {activeVideo && (
-            <>
+          {activeVideo && activeVideo.bunnyVideoId && (
+            <VideoErrorBoundary onError={() => setActiveVideo(null)}>
               <VideoPlayer
                 bunnyVideoId={activeVideo.bunnyVideoId}
                 isActive={true}
@@ -120,7 +135,7 @@ export default function DemoLecturesScreen() {
                   <Text style={modalStyles.freeText}>FREE DEMO</Text>
                 </View>
               </View>
-            </>
+            </VideoErrorBoundary>
           )}
         </View>
       </Modal>
