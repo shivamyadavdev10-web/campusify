@@ -46,7 +46,7 @@ export default function CourseContentScreen() {
   const { showToast } = useUIStore();
   const navigation = useNavigation();
 
-  const [activeVideo, setActiveVideo] = useState<{ contentId?: string; bunnyVideoId?: string; title: string } | null>(null);
+  const [activeVideo, setActiveVideo] = useState<{ contentId?: string; bunnyVideoId?: string; bunnyLibraryId?: string; title: string } | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['contents', subjectId],
@@ -94,7 +94,7 @@ export default function CourseContentScreen() {
 
     if (content.type === 'video') {
       if (content.bunnyVideoId) {
-        setActiveVideo({ contentId: content._id, bunnyVideoId: content.bunnyVideoId, title: content.title });
+        setActiveVideo({ contentId: content._id, bunnyVideoId: content.bunnyVideoId, bunnyLibraryId: content.bunnyLibraryId ?? undefined, title: content.title });
       } else if (content.isLocked) {
         showToast('🔒 Purchase this semester to watch this video', 'warning');
       } else {
@@ -125,7 +125,7 @@ export default function CourseContentScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
 
       {/* Purchase banner for non-purchased semesters */}
       {!isSemesterPurchased && (
@@ -135,7 +135,7 @@ export default function CourseContentScreen() {
           onPress={() => showToast('Contact us to purchase: +91 8104131420', 'info')}
         >
           <View style={styles.purchaseIconWrap}>
-            <ShieldCheck color="#a5b4fc" size={18} />
+            <ShieldCheck color="#4f46e5" size={18} />
           </View>
           <Text style={styles.purchaseText}>
             Purchase this semester to unlock all videos & notes
@@ -151,7 +151,7 @@ export default function CourseContentScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <EmptyState
-            icon={<BookOpen color="#818cf8" size={48} />}
+            icon={<BookOpen color="#4f46e5" size={48} />}
             title="No Content Yet"
             description="Content for this subject will appear here once uploaded"
           />
@@ -180,6 +180,7 @@ export default function CourseContentScreen() {
             <VideoErrorBoundary onError={closeVideo}>
               <VideoPlayer
                 bunnyVideoId={activeVideo.bunnyVideoId}
+                bunnyLibraryId={activeVideo.bunnyLibraryId}
                 isActive={true}
                 onClose={closeVideo}
               />
@@ -198,11 +199,11 @@ export default function CourseContentScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#0f0f1a',
+    backgroundColor: '#f8f9ff',
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#0f0f1a',
+    backgroundColor: '#f8f9ff',
     padding: 16,
     gap: 12,
   },
@@ -210,9 +211,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 12,
     marginBottom: 4,
-    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+    backgroundColor: 'rgba(99, 102, 241, 0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.2)',
+    borderColor: 'rgba(99, 102, 241, 0.15)',
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 13,
@@ -223,13 +224,13 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
   purchaseText: {
-    color: '#a5b4fc',
+    color: '#4f46e5',
     fontSize: 13,
     fontWeight: '600',
     flex: 1,

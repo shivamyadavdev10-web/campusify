@@ -2,17 +2,18 @@ import React, { useState, useCallback, useRef } from 'react';
 import { View, TouchableOpacity, ActivityIndicator, Text, StyleSheet } from 'react-native';
 import { WebView, WebViewNavigation } from 'react-native-webview';
 import { X, WifiOff, AlertTriangle } from 'lucide-react-native';
-import { getBunnyEmbedUrl, BUNNY_LIBRARY_ID } from '@/src/core/config/bunny';
+import { getBunnyEmbedUrl, FALLBACK_BUNNY_LIBRARY_ID } from '@/src/core/config/bunny';
 
 interface VideoPlayerProps {
   bunnyVideoId?: string | null;
+  bunnyLibraryId?: string | null; // Library ID from the API — determines which Bunny library to load from
   isActive: boolean;
   onClose?: () => void;
 }
 
 const MAX_RETRIES = 3;
 
-export default function VideoPlayer({ bunnyVideoId, isActive, onClose }: VideoPlayerProps) {
+export default function VideoPlayer({ bunnyVideoId, bunnyLibraryId, isActive, onClose }: VideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [errorType, setErrorType] = useState<'network' | 'http' | null>(null);
@@ -45,7 +46,11 @@ export default function VideoPlayer({ bunnyVideoId, isActive, onClose }: VideoPl
 
   if (!isActive) return null;
 
-  const embedUrl = getBunnyEmbedUrl(bunnyVideoId);
+  const embedUrl = getBunnyEmbedUrl(
+    bunnyVideoId,
+    bunnyLibraryId || FALLBACK_BUNNY_LIBRARY_ID,
+  );
+  console.log('[VideoPlayer] Loading embed URL:', embedUrl);
 
   const htmlContent = `<!DOCTYPE html>
 <html>
@@ -96,6 +101,7 @@ export default function VideoPlayer({ bunnyVideoId, isActive, onClose }: VideoPl
   }, []);
 
   const handleHttpError = useCallback((e: any) => {
+    console.log('[VideoPlayer] HTTP Error:', e.nativeEvent?.statusCode, e.nativeEvent?.url);
     setHasError(true);
     setErrorType('http');
     setIsLoading(false);
@@ -106,9 +112,17 @@ export default function VideoPlayer({ bunnyVideoId, isActive, onClose }: VideoPl
     const { url } = request;
     if (
       url.startsWith('about:') ||
+      url.startsWith('data:') ||
+      url.startsWith('blob:') ||
       url.includes('iframe.mediadelivery.net') ||
+      url.includes('player.mediadelivery.net') ||
       url.includes('mediadelivery.net') ||
-      url.startsWith('blob:')
+      url.includes('bunnycdn.com') ||
+      url.includes('b-cdn.net') ||
+      url.includes('bunny.net') ||
+      url.includes('vz-00cfb11c-b5a.b-cdn.net') ||
+      url.includes('vz-3360af1f-5bd.b-cdn.net') ||
+      url.includes('video.bunnycdn.com')
     ) {
       return true;
     }

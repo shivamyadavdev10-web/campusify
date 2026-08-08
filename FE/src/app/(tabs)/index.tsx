@@ -40,7 +40,7 @@ export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState<'branches' | 'trending' | 'demo'>('branches');
 
   // Video player state for demo lectures
-  const [activeVideo, setActiveVideo] = useState<{ bunnyVideoId: string; title: string } | null>(null);
+  const [activeVideo, setActiveVideo] = useState<{ bunnyVideoId: string; bunnyLibraryId?: string; title: string } | null>(null);
 
   const { showToast } = useUIStore();
 
@@ -79,7 +79,7 @@ export default function HomeScreen() {
   // Play free/demo video — use bunnyVideoId directly, no API call needed
   const handlePlayDemoVideo = useCallback((content: any) => {
     if (content.bunnyVideoId) {
-      setActiveVideo({ bunnyVideoId: content.bunnyVideoId, title: content.title });
+      setActiveVideo({ bunnyVideoId: content.bunnyVideoId, bunnyLibraryId: content.bunnyLibraryId, title: content.title });
     } else {
       showToast('This video is not available yet', 'info');
     }
@@ -483,6 +483,7 @@ export default function HomeScreen() {
             <VideoErrorBoundary onError={() => setActiveVideo(null)}>
               <VideoPlayer
                 bunnyVideoId={activeVideo.bunnyVideoId}
+                bunnyLibraryId={activeVideo.bunnyLibraryId}
                 isActive={true}
                 onClose={() => setActiveVideo(null)}
               />

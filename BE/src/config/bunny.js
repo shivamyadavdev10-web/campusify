@@ -1,17 +1,107 @@
 import axios from 'axios';
 import fs from 'fs';
 
-// Use dynamic getters to avoid issues if dotenv is loaded after this module is imported
-const getLibraryId = () => (process.env.BUNNY_STREAM_LIBRARY_ID || '705341').trim();
-const getApiKey = () => (process.env.BUNNY_STREAM_API_KEY || '1217df20-f43c-441a-86da47dc9193-5c64-4920').trim();
+// ══════════════════════════════════════════════════════════════════════════════
+// 🐇 Bunny.net Stream Configuration
+// ══════════════════════════════════════════════════════════════════════════════
+// Dynamic getters so env vars are always fresh (handles late dotenv loading)
+const getLibraryId = () => (process.env.BUNNY_STREAM_LIBRARY_ID || '722568').trim();
+const getApiKey = () => (process.env.BUNNY_STREAM_API_KEY || '').trim();
 const getBaseUrl = () => `https://video.bunnycdn.com/library/${getLibraryId()}/videos`;
+const getCollectionsUrl = () => `https://video.bunnycdn.com/library/${getLibraryId()}/collections`;
 
 /**
- * Creates a video object in Bunny Stream and returns the guid (Video ID)
- * @param {string} title 
- * @returns {Promise<string>} guid
+ * Returns common request headers for Bunny Stream API calls.
  */
-export const createBunnyVideo = async (title) => {
+const getBunnyHeaders = () => ({
+    'AccessKey': getApiKey(),
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 📁 Collection Management (Organize videos per subject)
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Creates a Bunny Stream Collection (folder) in the current library.
+ * Use this to organize videos by subject — e.g., "Mathematics", "Physics".
+ *
+ * @param {string} name - Name of the collection (e.g., subject name)
+ * @returns {Promise<string>} collectionId (guid)
+ *
+ * API Ref: POST /library/{libraryId}/collections
+ * Body: { "name": "Collection Name" }
+ */
+export const createBunnyCollection = async (name) => {
+    const url = getCollectionsUrl();
+    console.log(`\n[Bunny.net] Creating collection: "${name}" at ${url}`);
+
+    try {
+        const response = await axios.post(url, { name }, { headers: getBunnyHeaders() });
+        const collectionId = response.data.guid;
+        console.log(`✅ Collection created: "${name}" → ID: ${collectionId}`);
+        return collectionId;
+    } catch (error) {
+        console.error("❌ Bunny Create Collection Error:", error?.response?.data || error.message);
+        throw new Error(`Failed to create Bunny collection: ${error.response?.data?.Message || error.message}`);
+    }
+};
+
+/**
+ * Lists all Collections in the current library.
+ * Useful for admin dashboard — show existing subject folders.
+ *
+ * @param {number} [page=1]
+ * @param {number} [itemsPerPage=100]
+ * @returns {Promise<Array>} Array of collection objects
+ */
+export const listBunnyCollections = async (page = 1, itemsPerPage = 100) => {
+    const url = `${getCollectionsUrl()}?page=${page}&itemsPerPage=${itemsPerPage}`;
+
+    try {
+        const response = await axios.get(url, { headers: getBunnyHeaders() });
+        return response.data.items || [];
+    } catch (error) {
+        console.error("❌ Bunny List Collections Error:", error?.response?.data || error.message);
+        throw new Error(`Failed to list Bunny collections: ${error.response?.data?.Message || error.message}`);
+    }
+};
+
+/**
+ * Fetches a single Collection by ID.
+ *
+ * @param {string} collectionId
+ * @returns {Promise<Object>} Collection object
+ */
+export const getBunnyCollection = async (collectionId) => {
+    const url = `${getCollectionsUrl()}/${collectionId}`;
+
+    try {
+        const response = await axios.get(url, { headers: getBunnyHeaders() });
+        return response.data;
+    } catch (error) {
+        console.error("❌ Bunny Get Collection Error:", error?.response?.data || error.message);
+        throw new Error(`Failed to get Bunny collection: ${error.response?.data?.Message || error.message}`);
+    }
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 🎥 Video Management
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Creates a video object in Bunny Stream and returns the guid (Video ID).
+ * Optionally assigns the video to a Collection (subject folder).
+ *
+ * @param {string} title - Video title
+ * @param {string} [collectionId] - Optional collection to place the video in
+ * @returns {Promise<string>} guid (Bunny Video ID)
+ *
+ * API Ref: POST /library/{libraryId}/videos
+ * Body: { "title": "...", "collectionId": "..." }
+ */
+export const createBunnyVideo = async (title, collectionId = null) => {
     const libraryId = getLibraryId();
     const apiKey = getApiKey();
     
@@ -24,23 +114,21 @@ export const createBunnyVideo = async (title) => {
 
     const baseUrl = `https://video.bunnycdn.com/library/${libraryId}/videos`;
     
-    // Enhanced Debug Logging
-    console.log(`\n[Bunny.net] POST Request to: ${baseUrl}`);
-    console.log(`[Bunny.net] Using API Key: ${apiKey ? apiKey.substring(0, 5) + '...' + apiKey.slice(-5) : 'UNDEFINED'}`);
+    // Build request body — include collectionId if provided
+    const body = { title };
+    if (collectionId) {
+        body.collectionId = collectionId;
+    }
+
+    console.log(`\n[Bunny.net] POST ${baseUrl}`);
+    console.log(`[Bunny.net] Title: "${title}"${collectionId ? `, Collection: ${collectionId}` : ''}`);
+    console.log(`[Bunny.net] API Key: ${apiKey ? apiKey.substring(0, 5) + '...' + apiKey.slice(-5) : 'UNDEFINED'}`);
 
     try {
-        const response = await axios.post(
-            baseUrl,
-            { title: title },
-            {
-                headers: {
-                    'AccessKey': apiKey,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                }
-            }
-        );
-        return response.data.guid;
+        const response = await axios.post(baseUrl, body, { headers: getBunnyHeaders() });
+        const guid = response.data.guid;
+        console.log(`✅ Video created: "${title}" → ID: ${guid}`);
+        return guid;
     } catch (error) {
         if (error.response) {
             console.error("Bunny Create API Rejected:", error.response.data);
@@ -53,18 +141,20 @@ export const createBunnyVideo = async (title) => {
 };
 
 /**
- * Uploads the actual video file binary to Bunny Stream using a ReadStream
- * @param {string} guid 
- * @param {string} localFilePath 
+ * Uploads the actual video file binary to Bunny Stream using a ReadStream.
+ *
+ * @param {string} guid - The Bunny Video GUID from createBunnyVideo
+ * @param {string} localFilePath - Path to the local video file
  * @returns {Promise<void>}
+ *
+ * API Ref: PUT /library/{libraryId}/videos/{videoId}
  */
 export const uploadBunnyVideo = async (guid, localFilePath) => {
     const apiKey = getApiKey();
     const uploadUrl = `${getBaseUrl()}/${guid}`;
     
-    // Enhanced Debug Logging
-    console.log(`\n[Bunny.net] PUT Request to: ${uploadUrl}`);
-    console.log(`[Bunny.net] Using API Key: ${apiKey ? apiKey.substring(0, 5) + '...' + apiKey.slice(-5) : 'UNDEFINED'}`);
+    console.log(`\n[Bunny.net] PUT ${uploadUrl}`);
+    console.log(`[Bunny.net] API Key: ${apiKey ? apiKey.substring(0, 5) + '...' + apiKey.slice(-5) : 'UNDEFINED'}`);
 
     try {
         const stats = fs.statSync(localFilePath);
@@ -84,8 +174,53 @@ export const uploadBunnyVideo = async (guid, localFilePath) => {
                 maxContentLength: Infinity
             }
         );
+        console.log(`✅ Video uploaded successfully: ${guid}`);
     } catch (error) {
         console.error("❌ Bunny Upload Video Error:", error?.response?.data || error.message);
         throw new Error(`Failed to upload video to Bunny CDN: ${error.response?.data?.Message || error.message}`);
+    }
+};
+
+/**
+ * Moves an existing video to a different Collection.
+ * Use this to reorganize videos between subjects.
+ *
+ * @param {string} videoGuid - The Bunny Video GUID
+ * @param {string} collectionId - The target collection GUID
+ * @returns {Promise<void>}
+ *
+ * API Ref: POST /library/{libraryId}/videos/{videoId}
+ * Body: { "collectionId": "..." }
+ */
+export const moveVideoToCollection = async (videoGuid, collectionId) => {
+    const url = `${getBaseUrl()}/${videoGuid}`;
+
+    try {
+        await axios.post(url, { collectionId }, { headers: getBunnyHeaders() });
+        console.log(`✅ Video ${videoGuid} moved to collection ${collectionId}`);
+    } catch (error) {
+        console.error("❌ Bunny Move Video Error:", error?.response?.data || error.message);
+        throw new Error(`Failed to move video: ${error.response?.data?.Message || error.message}`);
+    }
+};
+
+/**
+ * Lists videos in a specific collection (subject folder).
+ * Enrolled students can be shown only videos from their semester's subjects.
+ *
+ * @param {string} collectionId
+ * @param {number} [page=1]
+ * @param {number} [itemsPerPage=100]
+ * @returns {Promise<Array>} Array of video objects
+ */
+export const listVideosByCollection = async (collectionId, page = 1, itemsPerPage = 100) => {
+    const url = `${getBaseUrl()}?collection=${collectionId}&page=${page}&itemsPerPage=${itemsPerPage}`;
+
+    try {
+        const response = await axios.get(url, { headers: getBunnyHeaders() });
+        return response.data.items || [];
+    } catch (error) {
+        console.error("❌ Bunny List Videos Error:", error?.response?.data || error.message);
+        throw new Error(`Failed to list videos: ${error.response?.data?.Message || error.message}`);
     }
 };

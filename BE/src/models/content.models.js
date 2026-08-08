@@ -30,6 +30,22 @@ const contentSchema = new mongoose.Schema(
       required: false,
       select: false, // ⚡ SECURITY: API me link leak nahi hoga
     },
+    // Bunny Stream Library ID for this specific content item.
+    // Stored so each video knows which library it belongs to,
+    // even if the active library changes in the future.
+    bunnyLibraryId: {
+      type: String,
+      required: false,
+      select: false, // Hidden from API by default; only included when explicitly selected
+    },
+    // Bunny Stream Collection ID — maps to a "folder" on Bunny.net.
+    // When you create per-subject collections on Bunny, store the
+    // collectionId here so you can list/filter videos by subject.
+    bunnyCollectionId: {
+      type: String,
+      required: false,
+      select: false,
+    },
     fileUrl: {
       type: String,
       required: false,

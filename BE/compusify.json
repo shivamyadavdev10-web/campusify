@@ -133,6 +133,7 @@
                 { "key": "title", "value": "Lecture 1: Intro", "type": "text" },
                 { "key": "type", "value": "video", "type": "text" },
                 { "key": "orderSequence", "value": "1", "type": "text" },
+                { "key": "bunnyCollectionId", "value": "<Collection_ID>", "type": "text", "description": "Optional: Place video in specific Bunny stream collection" },
                 { "key": "file", "type": "file", "src": "" }
               ]
             },
@@ -144,7 +145,7 @@
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"subjectId\": \"<ID>\",\n  \"title\": \"Lecture 2: HLS Stream\",\n  \"type\": \"video\",\n  \"orderSequence\": 2,\n  \"fileKey\": \"c3e819d3-1501-4160-94bc-a9791d2244c1\",\n  \"unit\": \"Unit 1\",\n  \"category\": \"Resources\",\n  \"isFree\": false\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"subjectId\": \"<ID>\",\n  \"title\": \"Lecture 2: HLS Stream\",\n  \"type\": \"video\",\n  \"orderSequence\": 2,\n  \"fileKey\": \"c3e819d3-1501-4160-94bc-a9791d2244c1\",\n  \"bunnyLibraryId\": \"<Library_ID>\",\n  \"bunnyCollectionId\": \"<Collection_ID>\",\n  \"unit\": \"Unit 1\",\n  \"category\": \"Resources\",\n  \"isFree\": false\n}" },
             "url": { "raw": "{{baseUrl}}/api/admin/content/add", "host": ["{{baseUrl}}"], "path": ["api", "admin", "content", "add"] }
           }
         },

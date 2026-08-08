@@ -39,7 +39,7 @@ export default React.memo(function UnitSection({ unitName, contents, isSemesterP
       >
         <View style={styles.headerLeft}>
           <View style={styles.unitIcon}>
-            <BookOpen color="#818cf8" size={16} strokeWidth={2.5} />
+            <BookOpen color="#4f46e5" size={16} strokeWidth={2.5} />
           </View>
           <View>
             <Text style={styles.unitTitle}>{unitName}</Text>
@@ -52,8 +52,8 @@ export default React.memo(function UnitSection({ unitName, contents, isSemesterP
         </View>
         <View style={[styles.chevronCircle, isExpanded && styles.chevronActive]}>
           {isExpanded
-            ? <ChevronUp color={isExpanded ? '#818cf8' : '#6b7280'} size={16} />
-            : <ChevronDown color="#6b7280" size={16} />
+            ? <ChevronUp color={isExpanded ? '#4f46e5' : '#64748b'} size={16} />
+            : <ChevronDown color="#64748b" size={16} />
           }
         </View>
       </TouchableOpacity>
@@ -78,16 +78,21 @@ export default React.memo(function UnitSection({ unitName, contents, isSemesterP
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#ffffff',
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(129, 140, 248, 0.08)',
+    borderColor: 'rgba(0, 0, 0, 0.06)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
   accentStrip: {
     height: 3,
-    backgroundColor: '#6366f1',
-    opacity: 0.6,
+    backgroundColor: '#4f46e5',
+    opacity: 0.8,
   },
   header: {
     flexDirection: 'row',
@@ -105,19 +110,19 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 9,
-    backgroundColor: 'rgba(129, 140, 248, 0.1)',
+    backgroundColor: 'rgba(79, 70, 229, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
   unitTitle: {
-    color: '#f3f4f6',
+    color: '#1e293b',
     fontWeight: 'bold',
     fontSize: 15,
     letterSpacing: 0.2,
   },
   unitMeta: {
-    color: '#6b7280',
+    color: '#64748b',
     fontSize: 11,
     marginTop: 2,
   },
@@ -125,12 +130,12 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 8,
-    backgroundColor: 'rgba(107, 114, 128, 0.1)',
+    backgroundColor: 'rgba(100, 116, 139, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   chevronActive: {
-    backgroundColor: 'rgba(129, 140, 248, 0.1)',
+    backgroundColor: 'rgba(79, 70, 229, 0.08)',
   },
   contentList: {
     paddingHorizontal: 6,
@@ -138,7 +143,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(0, 0, 0, 0.06)',
     marginHorizontal: 10,
     marginBottom: 4,
   },

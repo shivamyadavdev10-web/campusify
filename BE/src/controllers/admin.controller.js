@@ -197,7 +197,9 @@ export const uploadCourseContent = catchAsync(async (req, res) => {
     }
 
     // 👈 Postman se ab 'type', 'orderSequence', 'unit', aur 'category' ayega
-    const { branchId, semesterId, subjectId, unit, title, type, orderSequence, category } = req.body;
+    // bunnyCollectionId is optional — when set, the video is placed into a
+    // Bunny Stream Collection (subject folder) on Bunny.net
+    const { branchId, semesterId, subjectId, unit, title, type, orderSequence, category, bunnyCollectionId } = req.body;
 
     // Strict validation check
     if (!subjectId || !unit || !title || !type) {
@@ -217,8 +219,8 @@ export const uploadCourseContent = catchAsync(async (req, res) => {
         try {
             console.log("🚀 Initiating Bunny Stream Upload via service...");
             
-            // 1. Create a video object in Bunny Stream
-            const videoId = await createBunnyVideo(title);
+            // 1. Create a video object in Bunny Stream (optionally in a collection)
+            const videoId = await createBunnyVideo(title, bunnyCollectionId || null);
             console.log(`✅ Video object created with ID: ${videoId}`);
 
             // 2. Upload the actual video file binary
@@ -250,12 +252,16 @@ export const uploadCourseContent = catchAsync(async (req, res) => {
         // Save the returned Live URL to Database
         const newContent = await Content.create({ 
             subjectId,
-            unit, // e.g., "Unit 1"
+            unit,
             title, 
             type: type.toLowerCase(),          
             category: category || "Resources", 
             orderSequence: orderSequence || 1, 
-            fileKey: finalFileKey,     
+            fileKey: finalFileKey,
+            // Persist which Bunny library this video was uploaded to
+            bunnyLibraryId: type.toLowerCase() === 'video' ? (process.env.BUNNY_STREAM_LIBRARY_ID || null) : null,
+            // Persist the Bunny Collection (subject folder) this video was placed in
+            bunnyCollectionId: type.toLowerCase() === 'video' ? (bunnyCollectionId || null) : null,
             fileUrl: fileUrl,  
             isPublished: true 
         });
@@ -275,14 +281,14 @@ export const uploadCourseContent = catchAsync(async (req, res) => {
 });
 
 export const createContent = catchAsync(async (req, res) => {
-    const { subjectId, unit, title, type, category, fileKey, duration, isFree, orderSequence } = req.body;
+    const { subjectId, unit, title, type, category, fileKey, bunnyLibraryId, bunnyCollectionId, duration, isFree, orderSequence } = req.body;
 
     // Validate required fields
     if (!subjectId || !unit || !title || !type || orderSequence === undefined) {
         throw new ApiError(400, "Missing required fields: subjectId, unit, title, type, orderSequence.");
     }
 
-    // Create the content with the Bunny fileKey
+    // Create the content with the Bunny fileKey, library ID, and collection ID
     const newContent = await Content.create({
         subjectId,
         unit,
@@ -290,6 +296,14 @@ export const createContent = catchAsync(async (req, res) => {
         type: type.toLowerCase(),
         category: category || "Resources",
         fileKey,
+        // Accept explicit bunnyLibraryId from body, or fall back to the current env var
+        bunnyLibraryId: type.toLowerCase() === 'video'
+            ? (bunnyLibraryId || process.env.BUNNY_STREAM_LIBRARY_ID || null)
+            : null,
+        // Accept explicit bunnyCollectionId from body (subject folder on Bunny)
+        bunnyCollectionId: type.toLowerCase() === 'video'
+            ? (bunnyCollectionId || null)
+            : null,
         duration,
         isFree: isFree || false,
         orderSequence

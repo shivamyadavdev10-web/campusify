@@ -41,6 +41,7 @@ export interface Content {
   isLocked: boolean;
   fileUrl: string | null;
   bunnyVideoId: string | null;
+  bunnyLibraryId: string | null; // Which Bunny Stream library this video belongs to
   subjectId?: any;
 }
 

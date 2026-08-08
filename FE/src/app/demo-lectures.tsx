@@ -28,7 +28,7 @@ const cardShadow = Platform.select({
 });
 
 export default function DemoLecturesScreen() {
-  const [activeVideo, setActiveVideo] = useState<{ bunnyVideoId: string; title: string } | null>(null);
+  const [activeVideo, setActiveVideo] = useState<{ bunnyVideoId: string; bunnyLibraryId?: string; title: string } | null>(null);
   const { showToast } = useUIStore();
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -40,7 +40,7 @@ export default function DemoLecturesScreen() {
 
   const handlePlayVideo = useCallback((content: any) => {
     if (content.bunnyVideoId) {
-      setActiveVideo({ bunnyVideoId: content.bunnyVideoId, title: content.title });
+      setActiveVideo({ bunnyVideoId: content.bunnyVideoId, bunnyLibraryId: content.bunnyLibraryId, title: content.title });
     } else {
       showToast('This video is not available yet', 'info');
     }
@@ -126,6 +126,7 @@ export default function DemoLecturesScreen() {
             <VideoErrorBoundary onError={() => setActiveVideo(null)}>
               <VideoPlayer
                 bunnyVideoId={activeVideo.bunnyVideoId}
+                bunnyLibraryId={activeVideo.bunnyLibraryId}
                 isActive={true}
                 onClose={() => setActiveVideo(null)}
               />

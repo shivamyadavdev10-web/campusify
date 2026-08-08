@@ -44,21 +44,27 @@ export const getContents = catchAsync(async (req, res) => {
 
     // Fetch contents
     const contents = await Content.find({ subjectId })
-        .select('+fileKey') // Ensure fileKey 
+        .select('+fileKey +bunnyLibraryId') // Include both sensitive fields for processing
         .sort({ orderSequence: 1, createdAt: 1 });
+
+    // Default library ID fallback for content that was created before bunnyLibraryId field existed
+    const defaultLibraryId = process.env.BUNNY_STREAM_LIBRARY_ID;
 
     const processedContent = contents.map(item => {
         const isUnlocked = item.isFree || hasPurchased; 
 
         let finalUrl = null;
         let bunnyVideoId = null;
-        const actualKey = item.fileKey ;
+        let bunnyLibraryId = null;
+        const actualKey = item.fileKey;
         
         if (isUnlocked && actualKey) {
             if (actualKey.startsWith('http')) {
                 finalUrl = actualKey; // Direct link (e.g. external PDF)
             } else if (item.type === 'video') {
                 bunnyVideoId = actualKey; // Only send bunnyVideoId for videos
+                // Use stored library ID, or fall back to the current env var
+                bunnyLibraryId = item.bunnyLibraryId || defaultLibraryId;
             } else {
                 finalUrl = `/uploads/${actualKey}`;
             }
@@ -67,15 +73,16 @@ export const getContents = catchAsync(async (req, res) => {
         return {
             _id: item._id,
             title: item.title,
-            type: item.type, // Fallback support for your schema
-            category: item.category, // e.g., "Notes", "VVIMP QB"
-            unit: item.unit, // e.g., "Unit 1"
+            type: item.type,
+            category: item.category,
+            unit: item.unit,
             duration: item.duration,
             isFree: item.isFree,
             orderSequence: item.orderSequence,
             isLocked: !isUnlocked, 
             fileUrl: finalUrl,
-            bunnyVideoId: bunnyVideoId
+            bunnyVideoId: bunnyVideoId,
+            bunnyLibraryId: bunnyLibraryId, // Per-video library ID for correct embed URL
         };
     });
 
@@ -164,17 +171,20 @@ export const getTrendingCourses = catchAsync(async (req, res) => {
 // 🎁 Free Demo Lectures - Shows latest 10 free videos/contents
 export const getFreeContents = catchAsync(async (req, res) => {
     const contents = await Content.find({ isFree: true })
-        .select('+fileKey')
+        .select('+fileKey +bunnyLibraryId')
         .populate({
             path: 'subjectId',
             select: 'name semesterId'
         })
         .sort({ createdAt: -1 })
         .limit(10);
+
+    const defaultLibraryId = process.env.BUNNY_STREAM_LIBRARY_ID;
         
     const processedContent = contents.map(item => {
         let finalUrl = null;
         let bunnyVideoId = null;
+        let bunnyLibraryId = null;
         const actualKey = item.fileKey;
         
         if (actualKey) {
@@ -182,6 +192,7 @@ export const getFreeContents = catchAsync(async (req, res) => {
                 finalUrl = actualKey;
             } else if (item.type === 'video') {
                 bunnyVideoId = actualKey;
+                bunnyLibraryId = item.bunnyLibraryId || defaultLibraryId;
             } else {
                 finalUrl = `/uploads/${actualKey}`;
             }
@@ -195,6 +206,7 @@ export const getFreeContents = catchAsync(async (req, res) => {
             isFree: item.isFree,
             fileUrl: finalUrl,
             bunnyVideoId: bunnyVideoId,
+            bunnyLibraryId: bunnyLibraryId,
             subjectId: item.subjectId
         };
     });
@@ -204,11 +216,13 @@ export const getFreeContents = catchAsync(async (req, res) => {
 
 // 🎥 Fetch Single Content Signed URL (Fallback for Video Player)
 export const getSingleContentUrl = catchAsync(async (req, res) => {
-    const content = await Content.findById(req.params.contentId).select('+fileKey');
+    const content = await Content.findById(req.params.contentId).select('+fileKey +bunnyLibraryId');
     if (!content) throw new ApiError(404, "Content not found");
     
+    const defaultLibraryId = process.env.BUNNY_STREAM_LIBRARY_ID;
     let finalUrl = null;
     let bunnyVideoId = null;
+    let bunnyLibraryId = null;
     const actualKey = content.fileKey;
     
     if (actualKey) {
@@ -216,12 +230,13 @@ export const getSingleContentUrl = catchAsync(async (req, res) => {
             finalUrl = actualKey;
         } else if (content.type === 'video') {
             bunnyVideoId = actualKey;
+            bunnyLibraryId = content.bunnyLibraryId || defaultLibraryId;
         } else {
             finalUrl = `/uploads/${actualKey}`;
         }
     }
     
-    res.status(200).json({ status: true, fileUrl: finalUrl, bunnyVideoId });
+    res.status(200).json({ status: true, fileUrl: finalUrl, bunnyVideoId, bunnyLibraryId });
 });
 
 // 🎥 Stream URL for free content
