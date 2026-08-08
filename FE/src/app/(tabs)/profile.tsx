@@ -9,6 +9,7 @@ import { ErrorState } from '@/src/components/ui/ErrorState';
 import { getInitials } from '@/src/utils/helpers.utils';
 import { LogOut, BookOpen, CreditCard, Mail, Phone, Lock, ChevronRight, CheckCircle2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 
 export default function ProfileScreen() {
   const { logout } = useAuthStore();
@@ -51,10 +52,16 @@ export default function ProfileScreen() {
               {profileData?.email}
             </Text>
           </View>
-          <View className="self-start bg-[#f0fdf4] px-2 py-1 rounded-md flex-row items-center">
-            <CheckCircle2 color="#16a34a" size={12} className="mr-1" />
-            <Text className="text-[#16a34a] text-[11px] font-medium">Verified Student</Text>
-          </View>
+          {profileData?.isVerified ? (
+            <View className="self-start bg-[#f0fdf4] px-2 py-1 rounded-md flex-row items-center">
+              <CheckCircle2 color="#16a34a" size={12} className="mr-1" />
+              <Text className="text-[#16a34a] text-[11px] font-medium">Verified Student</Text>
+            </View>
+          ) : (
+            <View className="self-start bg-[#fefce8] px-2 py-1 rounded-md flex-row items-center">
+              <Text className="text-[#eab308] text-[11px] font-medium">Verify Account</Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -77,7 +84,7 @@ export default function ProfileScreen() {
 
       <TouchableOpacity 
         className="bg-surface-container-lowest rounded-3xl p-4 flex-row items-center justify-between shadow-sm mb-8 border border-outline-variant active:scale-95 transition-transform"
-        onPress={() => showToast('Payments module coming soon', 'info')}
+        onPress={() => showToast('Payment history coming in next update', 'info')}
       >
         <View className="flex-row items-center">
           <View className="w-[42px] h-[42px] rounded-full bg-[#f0f5ff] flex items-center justify-center mr-4">
@@ -138,7 +145,7 @@ export default function ProfileScreen() {
         </View>
       </View>
       
-      <Text className="text-center text-xs text-on-surface-variant mb-6">Campusify App v1.0.0</Text>
+      <Text className="text-center text-xs text-on-surface-variant mb-6">{`Campusify App v${Constants.expoConfig?.version || '1.0.0'}`}</Text>
     </ScrollView>
   );
 }

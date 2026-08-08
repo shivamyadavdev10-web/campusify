@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/src/core/api/client';
 import { Skeleton } from '@/src/components/ui/Skeleton';
 import { EmptyState } from '@/src/components/ui/EmptyState';
+import { ErrorState } from '@/src/components/ui/ErrorState';
 import { useRouter } from 'expo-router';
 import { Search as SearchIcon, Filter, ChevronRight, GraduationCap } from 'lucide-react-native';
 
@@ -22,7 +23,7 @@ export default function SearchScreen() {
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebounceHook(query, 300);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['search', debouncedQuery],
     queryFn: () => apiClient.get(`/curriculum/search?q=${encodeURIComponent(debouncedQuery)}`).then(res => res.data),
     enabled: debouncedQuery.length > 2
@@ -56,6 +57,8 @@ export default function SearchScreen() {
           <Skeleton width="100%" height={80} borderRadius={16} />
           <Skeleton width="100%" height={80} borderRadius={16} />
         </View>
+      ) : isError ? (
+        <ErrorState message="Search failed. Please check your connection." onRetry={refetch} />
       ) : (
         <FlatList
           data={data?.semesters || []}

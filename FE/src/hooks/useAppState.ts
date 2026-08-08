@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 
 export function useAppState(
@@ -6,6 +6,11 @@ export function useAppState(
   onBackground?: () => void
 ) {
   const [appState, setAppState] = useState<AppStateStatus>(AppState.currentState);
+  const onForegroundRef = useRef(onForeground);
+  const onBackgroundRef = useRef(onBackground);
+
+  onForegroundRef.current = onForeground;
+  onBackgroundRef.current = onBackground;
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
@@ -13,12 +18,12 @@ export function useAppState(
         appState.match(/inactive|background/) &&
         nextAppState === 'active'
       ) {
-        onForeground?.();
+        onForegroundRef.current?.();
       } else if (
         appState === 'active' &&
         nextAppState.match(/inactive|background/)
       ) {
-        onBackground?.();
+        onBackgroundRef.current?.();
       }
       setAppState(nextAppState);
     });
@@ -26,7 +31,7 @@ export function useAppState(
     return () => {
       subscription.remove();
     };
-  }, [appState, onForeground, onBackground]);
+  }, [appState]);
 
   return appState;
 }

@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { Search, Filter, Megaphone, Layers, Flame, PlayCircle, GraduationCap, ChevronRight, Star, Clock, Video } from 'lucide-react-native';
 import { BranchSelectModal } from '@/src/components/ui/BranchSelectModal';
 import VideoPlayer from '@/src/features/video/components/VideoPlayer';
+import { useUIStore } from '@/src/core/stores/ui.store';
 
 const cardShadow = Platform.select({
   ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3 },
@@ -30,6 +31,8 @@ export default function HomeScreen() {
   // Video player state for demo lectures
   const [activeVideo, setActiveVideo] = useState<{ bunnyVideoId: string; title: string } | null>(null);
 
+  const { showToast } = useUIStore();
+
   // Fetch branches
   const { data: branchesData, isLoading: branchesLoading, isError: branchesError, error: branchesQueryError, refetch: refetchBranches } = useQuery({
     queryKey: ['branches'],
@@ -48,20 +51,28 @@ export default function HomeScreen() {
     queryFn: () => apiClient.get('/curriculum/contents/free').then(res => res.data)
   });
 
+  // Fetch dynamic banner
+  const { data: bannerData, refetch: refetchBanner } = useQuery({
+    queryKey: ['home-banner'],
+    queryFn: () => apiClient.get('/curriculum/banner').then(res => res.data)
+  });
+
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([refetchBranches(), refetchTrending(), refetchFree()]);
+    await Promise.all([refetchBranches(), refetchTrending(), refetchFree(), refetchBanner()]);
     setRefreshing(false);
-  }, [refetchBranches, refetchTrending, refetchFree]);
+  }, [refetchBranches, refetchTrending, refetchFree, refetchBanner]);
 
   // Play free/demo video — use bunnyVideoId directly, no API call needed
   const handlePlayDemoVideo = useCallback((content: any) => {
     if (content.bunnyVideoId) {
       setActiveVideo({ bunnyVideoId: content.bunnyVideoId, title: content.title });
+    } else {
+      showToast('This video is not available yet', 'info');
     }
-  }, []);
+  }, [showToast]);
 
   if (branchesError) {
     const errorMsg = branchesQueryError instanceof Error ? branchesQueryError.message : String(branchesQueryError);
@@ -118,20 +129,38 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Hero Banner */}
-          <View className="bg-[#4182f9] rounded-2xl p-5 mb-6" style={cardShadowMd}>
-            <View className="bg-[#5c95fa] self-start px-3 py-1.5 rounded-full flex-row items-center mb-3">
-              <Megaphone color="#ffffff" size={14} />
-              <Text className="text-white text-[11px] font-semibold ml-2">New Launch: MSBTE Sem 3 Crash Course</Text>
+          {/* Hero Banner - Dynamic */}
+          {bannerData?.banner ? (
+            <View className="bg-[#4182f9] rounded-2xl p-5 mb-6" style={cardShadowMd}>
+              {bannerData.banner.subtitle && (
+                <View className="bg-[#5c95fa] self-start px-3 py-1.5 rounded-full flex-row items-center mb-3">
+                  <Megaphone color="#ffffff" size={14} />
+                  <Text className="text-white text-[11px] font-semibold ml-2">{bannerData.banner.subtitle}</Text>
+                </View>
+              )}
+              <Text className="text-white text-[22px] leading-tight font-bold mb-4 pr-6">{bannerData.banner.title || 'Explore Our Courses'}</Text>
+              <TouchableOpacity 
+                className="bg-white self-start px-5 py-2.5 rounded-xl active:opacity-90"
+                onPress={() => router.push('/search')}
+              >
+                <Text className="text-[#4182f9] font-bold text-sm">Explore Courses</Text>
+              </TouchableOpacity>
             </View>
-            <Text className="text-white text-[22px] leading-tight font-bold mb-4 pr-6">Master your MSBTE & MU Exams</Text>
-            <TouchableOpacity 
-              className="bg-white self-start px-5 py-2.5 rounded-xl active:opacity-90"
-              onPress={() => router.push('/search')}
-            >
-              <Text className="text-[#4182f9] font-bold text-sm">Explore Combos</Text>
-            </TouchableOpacity>
-          </View>
+          ) : (
+            <View className="bg-[#4182f9] rounded-2xl p-5 mb-6" style={cardShadowMd}>
+              <View className="bg-[#5c95fa] self-start px-3 py-1.5 rounded-full flex-row items-center mb-3">
+                <Megaphone color="#ffffff" size={14} />
+                <Text className="text-white text-[11px] font-semibold ml-2">Welcome to Campusify</Text>
+              </View>
+              <Text className="text-white text-[22px] leading-tight font-bold mb-4 pr-6">Master your Diploma Exams</Text>
+              <TouchableOpacity 
+                className="bg-white self-start px-5 py-2.5 rounded-xl active:opacity-90"
+                onPress={() => router.push('/search')}
+              >
+                <Text className="text-[#4182f9] font-bold text-sm">Explore Courses</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* ═══════ Quick Links Grid — Tabbed Style ═══════ */}
           <View className="flex-row justify-between mb-6 px-2">

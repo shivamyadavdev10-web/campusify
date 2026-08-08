@@ -30,9 +30,11 @@ export default React.memo(function FeedVideoItem({ content, onPress }: FeedVideo
             <Text className="text-white text-xs font-bold">{content.duration}</Text>
           </View>
         )}
-        <View className="absolute top-2 left-2 bg-green-500 px-2 py-1 rounded">
-          <Text className="text-white text-[10px] font-bold">FREE DEMO</Text>
-        </View>
+        {content.isFree && (
+          <View className="absolute top-2 left-2 bg-green-500 px-2 py-1 rounded">
+            <Text className="text-white text-[10px] font-bold">FREE DEMO</Text>
+          </View>
+        )}
       </View>
       <View className="p-3">
         <Text className="text-text font-bold text-base" numberOfLines={2}>{content.title}</Text>

@@ -7,7 +7,7 @@ export const BUNNY_LIBRARY_ID = '713170';
  * Docs: https://docs.bunny.net/docs/stream-embedding-videos#supported-parameters
  */
 export const getBunnyEmbedUrl = (videoId: string, autoplay = true) =>
-  `https://iframe.mediadelivery.net/embed/${BUNNY_LIBRARY_ID}/${videoId}?autoplay=${autoplay}&responsive=true&preload=true&playsinline=true&showSpeed=true`;
+  `https://iframe.mediadelivery.net/embed/${BUNNY_LIBRARY_ID}/${videoId}?autoplay=${autoplay}&muted=false&responsive=true&preload=true&playsinline=true&showSpeed=true&loop=false`;
 
 /**
  * Direct play URL (for sharing/linking, not for embedding)

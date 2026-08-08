@@ -38,7 +38,7 @@ export default function CourseContentScreen() {
     return Array.from(unitMap.entries()).map(([unitName, items]) => ({ unitName, contents: items }));
   }, [contents]);
 
-  const handleContentPress = useCallback((content: Content) => {
+  const handleContentPress = useCallback(async (content: Content) => {
     // Gate: locked content that isn't free and semester isn't purchased
     if (content.isLocked && !content.isFree && !isSemesterPurchased) {
       showToast('🔒 Purchase this semester to unlock all content', 'warning');
@@ -47,9 +47,16 @@ export default function CourseContentScreen() {
 
     if (content.type === 'pdf' || content.type === 'notes') {
       if (content.fileUrl) {
-        Linking.openURL(content.fileUrl).catch(() =>
-          showToast('Could not open the file. Try again.', 'error')
-        );
+        try {
+          const canOpen = await Linking.canOpenURL(content.fileUrl);
+          if (canOpen) {
+            await Linking.openURL(content.fileUrl);
+          } else {
+            showToast('Cannot open this file type on your device', 'error');
+          }
+        } catch {
+          showToast('Could not open the file. Try again.', 'error');
+        }
       } else {
         showToast('File not available yet', 'info');
       }
@@ -96,6 +103,7 @@ export default function CourseContentScreen() {
         <TouchableOpacity
           activeOpacity={0.85}
           style={styles.purchaseBanner}
+          onPress={() => showToast('Contact us to purchase: +91 8104131420', 'info')}
         >
           <View style={styles.purchaseIconWrap}>
             <ShieldCheck color="#a5b4fc" size={18} />

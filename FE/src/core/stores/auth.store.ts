@@ -73,6 +73,8 @@ interface AuthState {
   getDeviceId: () => Promise<string>;
 }
 
+let isLoggingOut = false;
+
 // ==========================================
 // Auth Store
 // ==========================================
@@ -139,11 +141,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    if (isLoggingOut) return;
     try {
+      isLoggingOut = true;
       await apiClient.post('/auth/logout').catch(() => {});
     } catch {
       // Silently ignore network errors during logout
     } finally {
+      isLoggingOut = false;
       await SecureStore.deleteItemAsync(KEYS.ACCESS_TOKEN).catch(() => {});
       await SecureStore.deleteItemAsync(KEYS.REFRESH_TOKEN).catch(() => {});
       set({ token: null, isAuthenticated: false });

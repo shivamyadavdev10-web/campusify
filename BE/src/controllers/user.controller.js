@@ -12,7 +12,11 @@ export const getMyProfile = catchAsync(async (req, res) => {
         .select("firstName lastName email phoneNo accountType isVerified purchasedSemesters")
         .populate({
             path: "purchasedSemesters",
-            select: "title price thumbnail semNumber isPublished" 
+            select: "title price thumbnail semNumber isPublished branchId",
+            populate: {
+                path: "branchId",
+                select: "name shortName"
+            }
         })
         .lean();
 
@@ -32,6 +36,7 @@ export const getMyProfile = catchAsync(async (req, res) => {
             accountType: user.accountType,
             isVerified: user.isVerified,
             totalPurchased: user.purchasedSemesters.length,
+            purchasedSemesters: user.purchasedSemesters,
             myCourses: user.purchasedSemesters 
         }
     });

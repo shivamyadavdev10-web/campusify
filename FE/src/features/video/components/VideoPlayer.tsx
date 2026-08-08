@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { View, TouchableOpacity, ActivityIndicator, Text, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { X } from 'lucide-react-native';
@@ -13,7 +13,7 @@ interface VideoPlayerProps {
 export default function VideoPlayer({ bunnyVideoId, isActive, onClose }: VideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-
+  const retryCount = useRef(0);
   // Fallback if bunnyVideoId is missing
   if (!bunnyVideoId) {
     return (
@@ -55,6 +55,7 @@ export default function VideoPlayer({ bunnyVideoId, isActive, onClose }: VideoPl
   `;
 
   const handleRetry = useCallback(() => {
+    retryCount.current += 1;
     setHasError(false);
     setIsLoading(true);
   }, []);
@@ -65,7 +66,7 @@ export default function VideoPlayer({ bunnyVideoId, isActive, onClose }: VideoPl
     <View style={styles.container}>
       {!hasError && (
         <WebView
-          key={hasError ? 'retry' : 'initial'}
+          key={`player-${retryCount.current}`}
           source={{ html: htmlContent }}
           style={styles.webview}
           allowsFullscreenVideo={true}
@@ -73,6 +74,10 @@ export default function VideoPlayer({ bunnyVideoId, isActive, onClose }: VideoPl
           mediaPlaybackRequiresUserAction={false}
           javaScriptEnabled={true}
           domStorageEnabled={true}
+          mixedContentMode="compatibility"
+          allowsProtectedMedia={true}
+          originWhitelist={['*']}
+          setSupportMultipleWindows={false}
           startInLoadingState={false}
           onLoadStart={() => setIsLoading(true)}
           onLoadEnd={() => setIsLoading(false)}

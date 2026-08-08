@@ -11,6 +11,7 @@ import { ErrorState } from '@/src/components/ui/ErrorState';
 import {
   GraduationCap, ChevronRight, BookOpen, ShoppingBag, Layers
 } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const cardShadow = Platform.select({
   ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6 },
@@ -20,6 +21,7 @@ const cardShadow = Platform.select({
 
 export default function MyCoursesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const {
     data: profileData,
@@ -32,7 +34,7 @@ export default function MyCoursesScreen() {
     queryFn: () => apiClient.get('/user/me').then(res => res.data.data),
   });
 
-  const purchasedSemesters: any[] = profileData?.purchasedSemesters || [];
+  const purchasedSemesters: any[] = profileData?.myCourses || profileData?.purchasedSemesters || [];
 
   if (isLoading) {
     return (
@@ -60,7 +62,7 @@ export default function MyCoursesScreen() {
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#4182f9" />}
     >
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.headerTitle}>My Courses</Text>
         <Text style={styles.headerSub}>{purchasedSemesters.length} enrolled</Text>
       </View>
@@ -153,7 +155,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fc',
   },
   header: {
-    paddingTop: 60,
     paddingBottom: 20,
     paddingHorizontal: 20,
     backgroundColor: '#fff',

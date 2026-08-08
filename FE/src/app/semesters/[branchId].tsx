@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, FlatList } from 'react-native';
+import { View, FlatList, RefreshControl } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/src/core/api/client';
@@ -13,7 +13,7 @@ export default function SemestersScreen() {
   const { branchId, branchName } = useLocalSearchParams<{ branchId: string; branchName?: string }>();
   const router = useRouter();
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ['semesters', branchId],
     queryFn: () => apiClient.get(`/curriculum/semesters/${branchId}`).then(res => res.data)
   });
@@ -35,6 +35,7 @@ export default function SemestersScreen() {
       <FlatList
         data={data?.semesters || []}
         keyExtractor={item => item._id}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#4182f9" />}
         contentContainerStyle={{ gap: 16, paddingTop: 16, paddingBottom: 24 }}
         ListEmptyComponent={<EmptyState message="No semesters available" />}
         renderItem={({ item }) => (
