@@ -42,6 +42,7 @@ export interface Content {
   fileUrl: string | null;
   bunnyVideoId: string | null;
   bunnyLibraryId: string | null; // Which Bunny Stream library this video belongs to
+  hlsUrl?: string | null;        // Direct HLS playlist URL from API
   subjectId?: any;
 }
 

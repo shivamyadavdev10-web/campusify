@@ -46,7 +46,7 @@ export default function CourseContentScreen() {
   const { showToast } = useUIStore();
   const navigation = useNavigation();
 
-  const [activeVideo, setActiveVideo] = useState<{ contentId?: string; bunnyVideoId?: string; bunnyLibraryId?: string; title: string } | null>(null);
+  const [activeVideo, setActiveVideo] = useState<{ contentId?: string; bunnyVideoId?: string; bunnyLibraryId?: string; hlsUrl?: string; title: string } | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['contents', subjectId],
@@ -94,7 +94,7 @@ export default function CourseContentScreen() {
 
     if (content.type === 'video') {
       if (content.bunnyVideoId) {
-        setActiveVideo({ contentId: content._id, bunnyVideoId: content.bunnyVideoId, bunnyLibraryId: content.bunnyLibraryId ?? undefined, title: content.title });
+        setActiveVideo({ contentId: content._id, bunnyVideoId: content.bunnyVideoId, bunnyLibraryId: content.bunnyLibraryId ?? undefined, hlsUrl: content.hlsUrl ?? undefined, title: content.title });
       } else if (content.isLocked) {
         showToast('🔒 Purchase this semester to watch this video', 'warning');
       } else {
@@ -180,7 +180,7 @@ export default function CourseContentScreen() {
             <VideoErrorBoundary onError={closeVideo}>
               <VideoPlayer
                 bunnyVideoId={activeVideo.bunnyVideoId}
-                bunnyLibraryId={activeVideo.bunnyLibraryId}
+                hlsUrl={activeVideo.hlsUrl}
                 isActive={true}
                 onClose={closeVideo}
               />

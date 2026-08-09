@@ -70,6 +70,8 @@ export const getContents = catchAsync(async (req, res) => {
             }
         }
 
+        const hostname = (process.env.BUNNY_STREAM_HOSTNAME || '').replace(/^https?:\/\//, '').trim();
+
         return {
             _id: item._id,
             title: item.title,
@@ -83,6 +85,7 @@ export const getContents = catchAsync(async (req, res) => {
             fileUrl: finalUrl,
             bunnyVideoId: bunnyVideoId,
             bunnyLibraryId: bunnyLibraryId, // Per-video library ID for correct embed URL
+            hlsUrl: (item.type === 'video' && bunnyVideoId && hostname) ? `https://${hostname}/${bunnyVideoId}/playlist.m3u8` : null,
         };
     });
 
@@ -198,6 +201,8 @@ export const getFreeContents = catchAsync(async (req, res) => {
             }
         }
         
+        const hostname = (process.env.BUNNY_STREAM_HOSTNAME || '').replace(/^https?:\/\//, '').trim();
+        
         return {
             _id: item._id,
             title: item.title,
@@ -207,6 +212,7 @@ export const getFreeContents = catchAsync(async (req, res) => {
             fileUrl: finalUrl,
             bunnyVideoId: bunnyVideoId,
             bunnyLibraryId: bunnyLibraryId,
+            hlsUrl: (item.type === 'video' && bunnyVideoId && hostname) ? `https://${hostname}/${bunnyVideoId}/playlist.m3u8` : null,
             subjectId: item.subjectId
         };
     });
@@ -225,18 +231,21 @@ export const getSingleContentUrl = catchAsync(async (req, res) => {
     let bunnyLibraryId = null;
     const actualKey = content.fileKey;
     
+    let hlsUrl = null;
     if (actualKey) {
         if (actualKey.startsWith('http')) {
             finalUrl = actualKey;
         } else if (content.type === 'video') {
             bunnyVideoId = actualKey;
             bunnyLibraryId = content.bunnyLibraryId || defaultLibraryId;
+            const hostname = (process.env.BUNNY_STREAM_HOSTNAME || '').replace(/^https?:\/\//, '').trim();
+            hlsUrl = (bunnyVideoId && hostname) ? `https://${hostname}/${bunnyVideoId}/playlist.m3u8` : null;
         } else {
             finalUrl = `/uploads/${actualKey}`;
         }
     }
     
-    res.status(200).json({ status: true, fileUrl: finalUrl, bunnyVideoId, bunnyLibraryId });
+    res.status(200).json({ status: true, fileUrl: finalUrl, bunnyVideoId, bunnyLibraryId, hlsUrl });
 });
 
 // 🎥 Stream URL for free content

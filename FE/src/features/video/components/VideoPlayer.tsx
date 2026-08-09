@@ -1,26 +1,26 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { View, TouchableOpacity, ActivityIndicator, Text, StyleSheet } from 'react-native';
-import { WebView, WebViewNavigation } from 'react-native-webview';
-import { X, WifiOff, AlertTriangle } from 'lucide-react-native';
-import { getBunnyEmbedUrl, FALLBACK_BUNNY_LIBRARY_ID } from '@/src/core/config/bunny';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { View, TouchableOpacity, ActivityIndicator, Text, StyleSheet, Platform } from 'react-native';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { X, WifiOff, AlertTriangle, RotateCcw } from 'lucide-react-native';
+import { getBunnyHlsUrl } from '@/src/core/config/bunny';
 
 interface VideoPlayerProps {
   bunnyVideoId?: string | null;
-  bunnyLibraryId?: string | null; // Library ID from the API — determines which Bunny library to load from
+  hlsUrl?: string | null;         // Pre-built HLS URL from API (preferred)
+  bunnyLibraryId?: string | null; // Kept for backward compat, no longer used for URL
   isActive: boolean;
   onClose?: () => void;
 }
 
 const MAX_RETRIES = 3;
 
-export default function VideoPlayer({ bunnyVideoId, bunnyLibraryId, isActive, onClose }: VideoPlayerProps) {
+export default function VideoPlayer({ bunnyVideoId, hlsUrl, isActive, onClose }: VideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [errorType, setErrorType] = useState<'network' | 'http' | null>(null);
-  const retryCount = useRef(0);
-  const isRetrying = useRef(false);
+  const [errorType, setErrorType] = useState<'network' | 'source' | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  // ── GUARD: Never render WebView with invalid ID ───────────────────────
+  // ── GUARD: Never render player with invalid ID ────────────────────────
   if (!bunnyVideoId || bunnyVideoId === 'null' || bunnyVideoId === 'undefined') {
     return (
       <View style={styles.container}>
@@ -46,118 +46,85 @@ export default function VideoPlayer({ bunnyVideoId, bunnyLibraryId, isActive, on
 
   if (!isActive) return null;
 
-  const embedUrl = getBunnyEmbedUrl(
-    bunnyVideoId,
-    bunnyLibraryId || FALLBACK_BUNNY_LIBRARY_ID,
-  );
-  console.log('[VideoPlayer] Loading embed URL:', embedUrl);
+  // Resolve the video URL: prefer pre-built hlsUrl from API, else build from videoId
+  const videoUrl = hlsUrl || getBunnyHlsUrl(bunnyVideoId);
 
-  const htmlContent = `<!DOCTYPE html>
-<html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { background: #000; width: 100%; height: 100%; overflow: hidden; }
-    iframe {
-      width: 100%; height: 100%;
-      border: none;
-      position: absolute;
-      top: 0; left: 0;
-    }
-  </style>
-</head>
-<body>
-  <iframe
-    src="${embedUrl}"
-    loading="eager"
-    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
-    allowfullscreen="true"
-    referrerpolicy="no-referrer-when-downgrade"
-    style="border:none;">
-  </iframe>
-</body>
-</html>`;
+  // ── Native Video Player ────────────────────────────────────────────────
+  const player = useVideoPlayer(videoUrl, (p) => {
+    p.loop = false;
+    p.play();
+  });
+
+  // ── Player event listeners ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!player) return;
+
+    const statusSub = player.addListener('statusChange', (payload: any) => {
+      const status = payload?.status ?? payload;
+      if (status === 'readyToPlay') {
+        setIsLoading(false);
+        setHasError(false);
+      } else if (status === 'loading') {
+        setIsLoading(true);
+      } else if (status === 'error') {
+        setIsLoading(false);
+        setHasError(true);
+        setErrorType('source');
+      }
+    });
+
+    return () => {
+      statusSub.remove();
+    };
+  }, [player]);
+
+  // ── Cleanup on unmount ──────────────────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      try {
+        player?.pause();
+      } catch (e) {
+        // Player may already be released
+      }
+    };
+  }, [player]);
 
   const handleRetry = useCallback(() => {
-    if (isRetrying.current) return; // debounce rapid taps
-    if (retryCount.current >= MAX_RETRIES) {
-      // Max retries hit — tell user to contact support
-      return;
-    }
-    isRetrying.current = true;
-    retryCount.current += 1;
+    if (retryCount >= MAX_RETRIES) return;
+    setRetryCount((c) => c + 1);
     setHasError(false);
     setErrorType(null);
     setIsLoading(true);
-    // Small delay so WebView has time to unmount cleanly
-    setTimeout(() => { isRetrying.current = false; }, 500);
-  }, []);
-
-  const handleError = useCallback(() => {
-    setHasError(true);
-    setErrorType('network');
-    setIsLoading(false);
-  }, []);
-
-  const handleHttpError = useCallback((e: any) => {
-    console.log('[VideoPlayer] HTTP Error:', e.nativeEvent?.statusCode, e.nativeEvent?.url);
-    setHasError(true);
-    setErrorType('http');
-    setIsLoading(false);
-  }, []);
-
-  // Block any navigation that tries to leave the Bunny embed domain
-  const handleShouldStartLoad = useCallback((request: WebViewNavigation) => {
-    const { url } = request;
-    if (
-      url.startsWith('about:') ||
-      url.startsWith('data:') ||
-      url.startsWith('blob:') ||
-      url.includes('iframe.mediadelivery.net') ||
-      url.includes('player.mediadelivery.net') ||
-      url.includes('mediadelivery.net') ||
-      url.includes('bunnycdn.com') ||
-      url.includes('b-cdn.net') ||
-      url.includes('bunny.net') ||
-      url.includes('vz-00cfb11c-b5a.b-cdn.net') ||
-      url.includes('vz-3360af1f-5bd.b-cdn.net') ||
-      url.includes('video.bunnycdn.com')
-    ) {
-      return true;
+    try {
+      player?.replace(videoUrl);
+      player?.play();
+    } catch (e) {
+      // Ignore — player may be in bad state
     }
-    // Block external navigation — prevents crash from redirect loops
-    return false;
-  }, []);
+  }, [retryCount, player, videoUrl]);
 
-  const reachedMaxRetries = retryCount.current >= MAX_RETRIES;
+  const handleClose = useCallback(() => {
+    try {
+      player?.pause();
+    } catch (e) {
+      // Ignore
+    }
+    onClose?.();
+  }, [player, onClose]);
+
+  const reachedMaxRetries = retryCount >= MAX_RETRIES;
 
   return (
     <View style={styles.container}>
+      {/* Native Video View */}
       {!hasError && (
-        <WebView
-          key={`player-${bunnyVideoId}-${retryCount.current}`}
-          source={{ html: htmlContent }}
-          style={styles.webview}
-          // ── Playback ──────────────────────────────────────────────
-          allowsFullscreenVideo={true}
-          allowsInlineMediaPlayback={true}
-          mediaPlaybackRequiresUserAction={false}
-          // ── Security / Compat ─────────────────────────────────────
-          javaScriptEnabled={true}
-          domStorageEnabled={true}
-          mixedContentMode="compatibility"
-          allowsProtectedMedia={true}
-          originWhitelist={['*']}
-          setSupportMultipleWindows={false}
-          // ── Navigation guard ──────────────────────────────────────
-          onShouldStartLoadWithRequest={handleShouldStartLoad}
-          // ── Lifecycle ─────────────────────────────────────────────
-          startInLoadingState={false}
-          onLoadStart={() => setIsLoading(true)}
-          onLoadEnd={() => setIsLoading(false)}
-          onError={handleError}
-          onHttpError={handleHttpError}
+        <VideoView
+          player={player}
+          style={styles.videoView}
+          contentFit="contain"
+          nativeControls={true}
+          allowsFullscreen={true}
+          allowsPictureInPicture={Platform.OS === 'ios'}
         />
       )}
 
@@ -177,13 +144,13 @@ export default function VideoPlayer({ bunnyVideoId, bunnyLibraryId, isActive, on
           ) : (
             <AlertTriangle color="#f87171" size={40} />
           )}
-          <Text style={styles.errorTitle} numberOfLines={1}>
+          <Text style={styles.errorTitle}>
             {errorType === 'network' ? 'No Internet' : 'Video Not Found'}
           </Text>
           <Text style={styles.errorMsg}>
             {errorType === 'network'
               ? 'Check your connection and try again.'
-              : 'This video could not be loaded.\nIt may not be processed yet.'}
+              : 'This video could not be loaded.\nIt may still be processing.'}
           </Text>
 
           {reachedMaxRetries ? (
@@ -196,8 +163,9 @@ export default function VideoPlayer({ bunnyVideoId, bunnyLibraryId, isActive, on
               onPress={handleRetry}
               activeOpacity={0.8}
             >
+              <RotateCcw color="#ffffff" size={14} style={{ marginRight: 6 }} />
               <Text style={styles.retryText}>
-                Retry ({MAX_RETRIES - retryCount.current} left)
+                Retry ({MAX_RETRIES - retryCount} left)
               </Text>
             </TouchableOpacity>
           )}
@@ -208,7 +176,7 @@ export default function VideoPlayer({ bunnyVideoId, bunnyLibraryId, isActive, on
       {onClose && (
         <TouchableOpacity
           style={styles.closeBtn}
-          onPress={onClose}
+          onPress={handleClose}
           activeOpacity={0.7}
           hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
         >
@@ -227,7 +195,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
-  webview: {
+  videoView: {
     flex: 1,
     backgroundColor: '#000',
   },
@@ -267,6 +235,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingVertical: 11,
     borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   retryText: {
     color: '#ffffff',

@@ -7,31 +7,28 @@
 export const FALLBACK_BUNNY_LIBRARY_ID =
   process.env.EXPO_PUBLIC_BUNNY_LIBRARY_ID || '722568';
 
-/**
- * Generates the Bunny.net embed player URL.
- * Always pass libraryId from the API response — this ensures the correct
- * library is used even if the backend library switches in future.
- *
- * Docs: https://docs.bunny.net/docs/stream-embedding-videos#supported-parameters
- */
-export const getBunnyEmbedUrl = (
-  videoId: string,
-  libraryId: string = FALLBACK_BUNNY_LIBRARY_ID,
-  autoplay = true,
-) =>
-  `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}?autoplay=${autoplay}&muted=false&responsive=true&preload=true&playsinline=true&showSpeed=true&loop=false&rememberPosition=true&compactControls=true`;
+// ─── CDN Pull Zone hostname for direct HLS streaming ─────────────────────────
+export const BUNNY_CDN_HOSTNAME =
+  process.env.EXPO_PUBLIC_BUNNY_CDN_HOSTNAME || 'vz-00cfb11c-b5a.b-cdn.net';
 
 /**
- * Direct play URL (for sharing/linking, not embedding in WebView)
+ * Direct HLS playlist URL — plays natively on iOS (AVPlayer) & Android (ExoPlayer).
+ * This is the preferred URL for mobile apps using expo-video or react-native-video.
+ *
+ * Format: https://{pullZoneHostname}/{videoId}/playlist.m3u8
  */
-export const getBunnyPlayUrl = (
-  videoId: string,
-  libraryId: string = FALLBACK_BUNNY_LIBRARY_ID,
-) => `https://player.mediadelivery.net/play/${libraryId}/${videoId}`;
+export const getBunnyHlsUrl = (videoId: string) =>
+  `https://${BUNNY_CDN_HOSTNAME}/${videoId}/playlist.m3u8`;
+
+/**
+ * Direct MP4 fallback URL (720p max).
+ * Use only when HLS is not supported by the device.
+ */
+export const getBunnyMp4Url = (videoId: string) =>
+  `https://${BUNNY_CDN_HOSTNAME}/${videoId}/play_720p.mp4`;
 
 /**
  * Thumbnail URL — uses the CDN pull zone hostname.
- * NOTE: If you switch libraries, update the hostname here too.
  */
 export const getBunnyThumbnailUrl = (videoId: string) =>
-  `https://vz-00cfb11c-b5a.b-cdn.net/${videoId}/thumbnail.jpg`;
+  `https://${BUNNY_CDN_HOSTNAME}/${videoId}/thumbnail.jpg`;
