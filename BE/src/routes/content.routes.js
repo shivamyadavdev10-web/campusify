@@ -1,5 +1,5 @@
 import express from "express";
-import { getStreamUrl } from "../controllers/content.controller.js";
+import { getStreamUrl } from "../controllers/bunny.controller.js";
 import { isLoggedIn } from "../middleware/isLoggedIn.middleware.js";
 
 const router = express.Router();

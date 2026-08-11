@@ -1,8 +1,9 @@
 import Content from "../models/content.models.js";
+import { buildHlsUrl, buildMp4Url, sanitizeBunnyVideoId } from "../utils/bunnyUrl.utils.js";
 
 /**
- * Retrieves the Bunny Stream raw HLS URL (.m3u8) for a specific content document.
- * (No token logic, returning raw URL for custom React Native player)
+ * Retrieves the Bunny Stream HLS URL for a specific content document.
+ * Uses centralized URL builder for consistency.
  */
 export const getStreamUrl = async (req, res) => {
     try {
@@ -12,27 +13,20 @@ export const getStreamUrl = async (req, res) => {
             return res.status(400).json({ success: false, message: 'contentId is required' });
         }
 
-        // 1. Fetch content from DB and explicitly select fileKey
         const content = await Content.findById(contentId).select("+fileKey");
 
         if (!content || !content.fileKey) {
             return res.status(404).json({ success: false, message: 'Content or video ID not found' });
         }
 
-        let hostname = process.env.BUNNY_STREAM_HOSTNAME;
+        const cleanVideoId = sanitizeBunnyVideoId(content.fileKey);
+        const videoUrl = buildHlsUrl(cleanVideoId);
+        const videoDirectUrl = buildMp4Url(cleanVideoId);
 
-        if (!hostname) {
+        if (!videoUrl) {
             return res.status(500).json({ success: false, message: 'Server configuration error: Missing BUNNY_STREAM_HOSTNAME' });
         }
-        
-        hostname = hostname.replace(/^https?:\/\//, '');
 
-        // 2. Construct standard raw video URL
-        // fileKey contains the Bunny Video ID
-        const videoUrl = `https://${hostname}/${content.fileKey}/playlist.m3u8`;
-        const videoDirectUrl = `https://${hostname}/${content.fileKey}/play_720p.mp4`;
-
-        // 3. Return to the frontend
         return res.status(200).json({
             success: true,
             videoUrl,

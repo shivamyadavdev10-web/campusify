@@ -17,18 +17,28 @@ export const BUNNY_CDN_HOSTNAME =
  *
  * Format: https://{pullZoneHostname}/{videoId}/playlist.m3u8
  */
-export const getBunnyHlsUrl = (videoId: string) =>
-  `https://${BUNNY_CDN_HOSTNAME}/${videoId}/playlist.m3u8`;
+export const getBunnyHlsUrl = (videoId: string): string | null => {
+  if (!videoId) return null;
+  // Strip accidental library prefix (e.g., '722568/guid' → 'guid')
+  const cleanId = videoId.includes('/') ? videoId.split('/').pop()! : videoId;
+  return `https://${BUNNY_CDN_HOSTNAME}/${cleanId}/playlist.m3u8`;
+};
 
 /**
  * Direct MP4 fallback URL (720p max).
  * Use only when HLS is not supported by the device.
  */
-export const getBunnyMp4Url = (videoId: string) =>
-  `https://${BUNNY_CDN_HOSTNAME}/${videoId}/play_720p.mp4`;
+export const getBunnyMp4Url = (videoId: string): string | null => {
+  if (!videoId) return null;
+  const cleanId = videoId.includes('/') ? videoId.split('/').pop()! : videoId;
+  return `https://${BUNNY_CDN_HOSTNAME}/${cleanId}/play_720p.mp4`;
+};
 
 /**
  * Thumbnail URL — uses the CDN pull zone hostname.
  */
-export const getBunnyThumbnailUrl = (videoId: string) =>
-  `https://${BUNNY_CDN_HOSTNAME}/${videoId}/thumbnail.jpg`;
+export const getBunnyThumbnailUrl = (videoId: string): string | null => {
+  if (!videoId) return null;
+  const cleanId = videoId.includes('/') ? videoId.split('/').pop()! : videoId;
+  return `https://${BUNNY_CDN_HOSTNAME}/${cleanId}/thumbnail.jpg`;
+};

@@ -5,6 +5,7 @@ import Content from "../models/content.models.js";
 import Banner from "../models/banner.models.js";
 import catchAsync from "../utils/catchAsync.utils.js";
 import ApiError from "../utils/apiError.utils.js";
+import { buildHlsUrl, buildMp4Url, sanitizeBunnyVideoId } from "../utils/bunnyUrl.utils.js";
 
 // ========================================================
 // 📱 STUDENT APIs (App / Frontend Display)
@@ -62,15 +63,13 @@ export const getContents = catchAsync(async (req, res) => {
             if (actualKey.startsWith('http')) {
                 finalUrl = actualKey; // Direct link (e.g. external PDF)
             } else if (item.type === 'video') {
-                bunnyVideoId = actualKey; // Only send bunnyVideoId for videos
+                bunnyVideoId = sanitizeBunnyVideoId(actualKey); // Only send bunnyVideoId for videos
                 // Use stored library ID, or fall back to the current env var
                 bunnyLibraryId = item.bunnyLibraryId || defaultLibraryId;
             } else {
                 finalUrl = `/uploads/${actualKey}`;
             }
         }
-
-        const hostname = (process.env.BUNNY_STREAM_HOSTNAME || '').replace(/^https?:\/\//, '').trim();
 
         return {
             _id: item._id,
@@ -85,7 +84,7 @@ export const getContents = catchAsync(async (req, res) => {
             fileUrl: finalUrl,
             bunnyVideoId: bunnyVideoId,
             bunnyLibraryId: bunnyLibraryId, // Per-video library ID for correct embed URL
-            hlsUrl: (item.type === 'video' && bunnyVideoId && hostname) ? `https://${hostname}/${bunnyVideoId}/playlist.m3u8` : null,
+            hlsUrl: (item.type === 'video' && bunnyVideoId) ? buildHlsUrl(bunnyVideoId) : null,
         };
     });
 
@@ -194,14 +193,12 @@ export const getFreeContents = catchAsync(async (req, res) => {
             if (actualKey.startsWith('http')) {
                 finalUrl = actualKey;
             } else if (item.type === 'video') {
-                bunnyVideoId = actualKey;
+                bunnyVideoId = sanitizeBunnyVideoId(actualKey);
                 bunnyLibraryId = item.bunnyLibraryId || defaultLibraryId;
             } else {
                 finalUrl = `/uploads/${actualKey}`;
             }
         }
-        
-        const hostname = (process.env.BUNNY_STREAM_HOSTNAME || '').replace(/^https?:\/\//, '').trim();
         
         return {
             _id: item._id,
@@ -212,7 +209,7 @@ export const getFreeContents = catchAsync(async (req, res) => {
             fileUrl: finalUrl,
             bunnyVideoId: bunnyVideoId,
             bunnyLibraryId: bunnyLibraryId,
-            hlsUrl: (item.type === 'video' && bunnyVideoId && hostname) ? `https://${hostname}/${bunnyVideoId}/playlist.m3u8` : null,
+            hlsUrl: (item.type === 'video' && bunnyVideoId) ? buildHlsUrl(bunnyVideoId) : null,
             subjectId: item.subjectId
         };
     });
@@ -236,10 +233,9 @@ export const getSingleContentUrl = catchAsync(async (req, res) => {
         if (actualKey.startsWith('http')) {
             finalUrl = actualKey;
         } else if (content.type === 'video') {
-            bunnyVideoId = actualKey;
+            bunnyVideoId = sanitizeBunnyVideoId(actualKey);
             bunnyLibraryId = content.bunnyLibraryId || defaultLibraryId;
-            const hostname = (process.env.BUNNY_STREAM_HOSTNAME || '').replace(/^https?:\/\//, '').trim();
-            hlsUrl = (bunnyVideoId && hostname) ? `https://${hostname}/${bunnyVideoId}/playlist.m3u8` : null;
+            hlsUrl = bunnyVideoId ? buildHlsUrl(bunnyVideoId) : null;
         } else {
             finalUrl = `/uploads/${actualKey}`;
         }
@@ -255,10 +251,9 @@ export const getFreeStreamUrl = catchAsync(async (req, res) => {
     if (!content.isFree) throw new ApiError(403, "This content requires enrollment");
     
     // Return bunny stream URL for free content
-    const bunnyVideoId = content.fileKey;
-    const hostname = (process.env.BUNNY_STREAM_HOSTNAME || '').replace(/^https?:\/\//, '');
-    const videoUrl = `https://${hostname}/${bunnyVideoId}/playlist.m3u8`;
-    const videoDirectUrl = `https://${hostname}/${bunnyVideoId}/play_720p.mp4`;
+    const bunnyVideoId = sanitizeBunnyVideoId(content.fileKey);
+    const videoUrl = buildHlsUrl(bunnyVideoId);
+    const videoDirectUrl = buildMp4Url(bunnyVideoId);
     
     res.status(200).json({ success: true, videoUrl, videoDirectUrl });
 });

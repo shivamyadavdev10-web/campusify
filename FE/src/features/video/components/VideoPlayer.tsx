@@ -46,8 +46,11 @@ export default function VideoPlayer({ bunnyVideoId, hlsUrl, isActive, onClose }:
 
   if (!isActive) return null;
 
+  // Sanitize: strip accidental library prefix (e.g., '722568/guid' → 'guid')
+  const cleanVideoId = bunnyVideoId.includes('/') ? bunnyVideoId.split('/').pop()! : bunnyVideoId;
+
   // Resolve the video URL: prefer pre-built hlsUrl from API, else build from videoId
-  const videoUrl = hlsUrl || getBunnyHlsUrl(bunnyVideoId);
+  const videoUrl = hlsUrl || getBunnyHlsUrl(cleanVideoId);
 
   // ── Native Video Player ────────────────────────────────────────────────
   const player = useVideoPlayer(videoUrl, (p) => {

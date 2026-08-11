@@ -126,7 +126,10 @@ export const createBunnyVideo = async (title, collectionId = null) => {
 
     try {
         const response = await axios.post(baseUrl, body, { headers: getBunnyHeaders() });
-        const guid = response.data.guid;
+        let guid = response.data.guid;
+        if (guid && guid.includes('/')) {
+            guid = guid.split('/').pop();
+        }
         console.log(`✅ Video created: "${title}" → ID: ${guid}`);
         return guid;
     } catch (error) {
@@ -222,5 +225,49 @@ export const listVideosByCollection = async (collectionId, page = 1, itemsPerPag
     } catch (error) {
         console.error("❌ Bunny List Videos Error:", error?.response?.data || error.message);
         throw new Error(`Failed to list videos: ${error.response?.data?.Message || error.message}`);
+    }
+};
+
+/**
+ * Deletes a video from Bunny Stream.
+ *
+ * @param {string} videoGuid - The Bunny Video GUID
+ * @returns {Promise<void>}
+ *
+ * API Ref: DELETE /library/{libraryId}/videos/{videoId}
+ */
+export const deleteBunnyVideo = async (videoGuid) => {
+    const cleanGuid = videoGuid.includes('/') ? videoGuid.split('/').pop() : videoGuid;
+    const url = `${getBaseUrl()}/${cleanGuid}`;
+
+    console.log(`\n[Bunny.net] DELETE ${url}`);
+
+    try {
+        await axios.delete(url, { headers: getBunnyHeaders() });
+        console.log(`✅ Video deleted: ${cleanGuid}`);
+    } catch (error) {
+        console.error("❌ Bunny Delete Video Error:", error?.response?.data || error.message);
+        throw new Error(`Failed to delete video: ${error.response?.data?.Message || error.message}`);
+    }
+};
+
+/**
+ * Fetches video details (status, duration, resolutions, etc.) from Bunny Stream.
+ *
+ * @param {string} videoGuid - The Bunny Video GUID
+ * @returns {Promise<Object>} Video details object from Bunny API
+ *
+ * API Ref: GET /library/{libraryId}/videos/{videoId}
+ */
+export const getBunnyVideoDetails = async (videoGuid) => {
+    const cleanGuid = videoGuid.includes('/') ? videoGuid.split('/').pop() : videoGuid;
+    const url = `${getBaseUrl()}/${cleanGuid}`;
+
+    try {
+        const response = await axios.get(url, { headers: getBunnyHeaders() });
+        return response.data;
+    } catch (error) {
+        console.error("❌ Bunny Get Video Error:", error?.response?.data || error.message);
+        throw new Error(`Failed to get video details: ${error.response?.data?.Message || error.message}`);
     }
 };

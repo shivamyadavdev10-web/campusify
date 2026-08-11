@@ -1,71 +1,223 @@
 {
   "info": {
     "name": "Campusify API Collection",
-    "description": "Complete A-Z API Blueprint with pre-configured environments, body payloads, and new advanced security routes.",
+    "description": "Complete A-Z API Blueprint — Updated Aug 2026. All routes: Auth, Admin, Curriculum, Content, User, Payment, Health.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:5000", "type": "string" },
-    { "key": "adminToken", "value": "paste_admin_jwt_here", "type": "string" },
-    { "key": "studentToken", "value": "paste_student_jwt_here", "type": "string" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "renderUrl",
+      "value": "https://campusify-wowg.onrender.com",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "paste_admin_jwt_here",
+      "type": "string"
+    },
+    {
+      "key": "studentToken",
+      "value": "paste_student_jwt_here",
+      "type": "string"
+    }
   ],
   "item": [
     {
       "name": "🔐 1. Authentication",
-      "description": "Public Routes for Auth",
+      "description": "Public routes — rate-limited",
       "item": [
         {
-          "name": "1. Register New Student",
+          "name": "1. Register",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"phoneNo\": \"9999999999\",\n  \"email\": \"john@test.com\",\n  \"createPassword\": \"Password123!\",\n  \"confirmPassword\": \"Password123!\"\n}" },
-            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] }
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"phoneNo\": \"9999999999\",\n  \"email\": \"john@test.com\",\n  \"createPassword\": \"Password123!\",\n  \"confirmPassword\": \"Password123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
           }
         },
         {
           "name": "2. Verify OTP",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"email\": \"john@test.com\",\n  \"otp\": \"123456\",\n  \"deviceId\": \"postman-123\"\n}" },
-            "url": { "raw": "{{baseUrl}}/api/auth/verify-otp", "host": ["{{baseUrl}}"], "path": ["api", "auth", "verify-otp"] }
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@test.com\",\n  \"otp\": \"123456\",\n  \"deviceId\": \"postman-123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "verify-otp"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2b. Resend OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@test.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/resend-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "resend-otp"
+              ]
+            }
           }
         },
         {
           "name": "3. Create Super Admin",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"Admin\",\n  \"lastName\": \"User\",\n  \"phoneNo\": \"1234567890\",\n  \"email\": \"admin@campusify.com\",\n  \"createPassword\": \"Password123!\",\n  \"confirmPassword\": \"Password123!\",\n  \"adminSecretKey\": \"ShivEdTechSuperSecretKey12345678\",\n  \"deviceId\": \"admin-device\"\n}" },
-            "url": { "raw": "{{baseUrl}}/api/auth/create-super-admin", "host": ["{{baseUrl}}"], "path": ["api", "auth", "create-super-admin"] }
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Admin\",\n  \"lastName\": \"User\",\n  \"phoneNo\": \"1234567890\",\n  \"email\": \"admin@campusify.com\",\n  \"createPassword\": \"Password123!\",\n  \"confirmPassword\": \"Password123!\",\n  \"adminSecretKey\": \"ShivEdTechSuperSecretKey12345678\",\n  \"deviceId\": \"admin-device\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/create-super-admin",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "create-super-admin"
+              ]
+            }
           }
         },
         {
-          "name": "4. Login (Admin/Student)",
+          "name": "4. Login",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@campusify.com\",\n  \"password\": \"Password123!\",\n  \"deviceId\": \"admin-device\"\n}" },
-            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@campusify.com\",\n  \"password\": \"Password123!\",\n  \"deviceId\": \"admin-device\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
           }
         },
         {
           "name": "5. Forgot Password",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"email\": \"john@test.com\"\n}" },
-            "url": { "raw": "{{baseUrl}}/api/auth/forgot-password", "host": ["{{baseUrl}}"], "path": ["api", "auth", "forgot-password"] }
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@test.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "forgot-password"
+              ]
+            }
           }
         },
         {
           "name": "6. Reset Password",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"email\": \"john@test.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewPass123!\",\n  \"confirmNewPassword\": \"NewPass123!\"\n}" },
-            "url": { "raw": "{{baseUrl}}/api/auth/reset-password", "host": ["{{baseUrl}}"], "path": ["api", "auth", "reset-password"] }
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@test.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewPass123!\",\n  \"confirmNewPassword\": \"NewPass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "reset-password"
+              ]
+            }
           }
         },
         {
@@ -73,262 +225,15 @@
           "request": {
             "method": "POST",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/api/auth/logout", "host": ["{{baseUrl}}"], "path": ["api", "auth", "logout"] }
-          }
-        }
-      ]
-    },
-    {
-      "name": "🛡️ 2. Admin Operations",
-      "description": "Requires Admin Token in Headers",
-      "auth": {
-        "type": "bearer",
-        "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
-      },
-      "item": [
-        {
-          "name": "8. Dashboard Stats",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/admin/dashboard-stats", "host": ["{{baseUrl}}"], "path": ["api", "admin", "dashboard-stats"] }
-          }
-        },
-        {
-          "name": "9. Create Branch",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Computer Engineering\",\n  \"shortName\": \"CO\",\n  \"description\": \"CS Branch\"\n}" },
-            "url": { "raw": "{{baseUrl}}/api/admin/branch", "host": ["{{baseUrl}}"], "path": ["api", "admin", "branch"] }
-          }
-        },
-        {
-          "name": "10. Create Semester",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"branchId\": \"<ID>\",\n  \"title\": \"Semester 1\",\n  \"description\": \"1st Sem\",\n  \"price\": 499\n}" },
-            "url": { "raw": "{{baseUrl}}/api/admin/semester", "host": ["{{baseUrl}}"], "path": ["api", "admin", "semester"] }
-          }
-        },
-        {
-          "name": "11. Create Subject",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"branchId\": \"<ID>\",\n  \"semesterId\": \"<ID>\",\n  \"name\": \"Mathematics\",\n  \"orderIndex\": 1\n}" },
-            "url": { "raw": "{{baseUrl}}/api/admin/subject", "host": ["{{baseUrl}}"], "path": ["api", "admin", "subject"] }
-          }
-        },
-        {
-          "name": "12. Upload Course Video/PDF",
-          "request": {
-            "method": "POST",
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                { "key": "branchId", "value": "<ID>", "type": "text" },
-                { "key": "semesterId", "value": "<ID>", "type": "text" },
-                { "key": "subjectId", "value": "<ID>", "type": "text" },
-                { "key": "title", "value": "Lecture 1: Intro", "type": "text" },
-                { "key": "type", "value": "video", "type": "text" },
-                { "key": "orderSequence", "value": "1", "type": "text" },
-                { "key": "bunnyCollectionId", "value": "<Collection_ID>", "type": "text", "description": "Optional: Place video in specific Bunny stream collection" },
-                { "key": "file", "type": "file", "src": "" }
-              ]
-            },
-            "url": { "raw": "{{baseUrl}}/api/admin/content", "host": ["{{baseUrl}}"], "path": ["api", "admin", "content"] }
-          }
-        },
-        {
-          "name": "12b. Add Content (Bunny FileKey)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"subjectId\": \"<ID>\",\n  \"title\": \"Lecture 2: HLS Stream\",\n  \"type\": \"video\",\n  \"orderSequence\": 2,\n  \"fileKey\": \"c3e819d3-1501-4160-94bc-a9791d2244c1\",\n  \"bunnyLibraryId\": \"<Library_ID>\",\n  \"bunnyCollectionId\": \"<Collection_ID>\",\n  \"unit\": \"Unit 1\",\n  \"category\": \"Resources\",\n  \"isFree\": false\n}" },
-            "url": { "raw": "{{baseUrl}}/api/admin/content/add", "host": ["{{baseUrl}}"], "path": ["api", "admin", "content", "add"] }
-          }
-        },
-        {
-          "name": "13. Upload Dynamic Banner",
-          "request": {
-            "method": "POST",
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                { "key": "actionUrl", "value": "app://semester/<ID>", "type": "text" },
-                { "key": "file", "type": "file", "src": "" }
-              ]
-            },
-            "url": { "raw": "{{baseUrl}}/api/admin/banner", "host": ["{{baseUrl}}"], "path": ["api", "admin", "banner"] }
-          }
-        },
-        {
-          "name": "14. Force Change Password",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"<Target_User_ID>\",\n  \"newPassword\": \"NewPass123!\"\n}" },
-            "url": { "raw": "{{baseUrl}}/api/admin/users/update-password", "host": ["{{baseUrl}}"], "path": ["api", "admin", "users", "update-password"] }
-          }
-        },
-        {
-          "name": "15. Reveal User Password",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"adminSecretKey\": \"ShivEdTechSuperSecretKey12345678\",\n  \"userId\": \"<ID>\"\n}" },
-            "url": { "raw": "{{baseUrl}}/api/admin/security/reveal-password", "host": ["{{baseUrl}}"], "path": ["api", "admin", "security", "reveal-password"] }
-          }
-        },
-        {
-          "name": "16. Unlock Device",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"<Target_User_ID>\"\n}" },
-            "url": { "raw": "{{baseUrl}}/api/admin/security/unlock-device", "host": ["{{baseUrl}}"], "path": ["api", "admin", "security", "unlock-device"] }
-          }
-        },
-        {
-          "name": "17. Toggle Ban User",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"<Target_User_ID>\"\n}" },
-            "url": { "raw": "{{baseUrl}}/api/admin/security/toggle-ban", "host": ["{{baseUrl}}"], "path": ["api", "admin", "security", "toggle-ban"] }
-          }
-        },
-        {
-          "name": "18. Get Suspicious Logs",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/admin/security/suspicious-logs", "host": ["{{baseUrl}}"], "path": ["api", "admin", "security", "suspicious-logs"] }
-          }
-        },
-        {
-          "name": "19. Bulk Upload Students",
-          "request": {
-            "method": "POST",
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                { "key": "file", "type": "file", "src": "" }
-              ]
-            },
-            "url": { "raw": "{{baseUrl}}/api/admin/users/bulk-upload", "host": ["{{baseUrl}}"], "path": ["api", "admin", "users", "bulk-upload"] }
-          }
-        },
-        {
-          "name": "20. Give Manual Access",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"<ID>\",\n  \"semesterId\": \"<ID>\"\n}" },
-            "url": { "raw": "{{baseUrl}}/api/admin/users/manual-access", "host": ["{{baseUrl}}"], "path": ["api", "admin", "users", "manual-access"] }
-          }
-        },
-        {
-          "name": "21. Toggle Content Free/Paid",
-          "request": {
-            "method": "PATCH",
-            "url": { "raw": "{{baseUrl}}/api/admin/content/<contentId>/toggle-free", "host": ["{{baseUrl}}"], "path": ["api", "admin", "content", "<contentId>", "toggle-free"] }
-          }
-        },
-        {
-          "name": "22. Reorder Subjects",
-          "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"orderedIds\": [\"<Sub_ID_1>\", \"<Sub_ID_2>\"]\n}" },
-            "url": { "raw": "{{baseUrl}}/api/admin/subject/reorder", "host": ["{{baseUrl}}"], "path": ["api", "admin", "subject", "reorder"] }
-          }
-        }
-      ]
-    },
-    {
-      "name": "📚 3. App Curriculum (Frontend)",
-      "item": [
-        {
-          "name": "23. Get Home Screen Banner",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/curriculum/banner", "host": ["{{baseUrl}}"], "path": ["api", "curriculum", "banner"] }
-          }
-        },
-        {
-          "name": "24. Get All Branches",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/curriculum/branches", "host": ["{{baseUrl}}"], "path": ["api", "curriculum", "branches"] }
-          }
-        },
-        {
-          "name": "25. Get Free Demo Contents",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/curriculum/contents/free", "host": ["{{baseUrl}}"], "path": ["api", "curriculum", "contents", "free"] }
-          }
-        },
-        {
-          "name": "26. Get Trending Courses",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/curriculum/courses/trending", "host": ["{{baseUrl}}"], "path": ["api", "curriculum", "courses", "trending"] }
-          }
-        },
-        {
-          "name": "27. Get Semesters by Branch",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
-            "url": { "raw": "{{baseUrl}}/api/curriculum/semesters/<branchId>", "host": ["{{baseUrl}}"], "path": ["api", "curriculum", "semesters", "<branchId>"] }
-          }
-        },
-        {
-          "name": "28. Get Subjects by Semester",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
-            "url": { "raw": "{{baseUrl}}/api/curriculum/subjects/<semesterId>", "host": ["{{baseUrl}}"], "path": ["api", "curriculum", "subjects", "<semesterId>"] }
-          }
-        },
-        {
-          "name": "29. Get Contents by Subject",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
-            "url": { "raw": "{{baseUrl}}/api/curriculum/contents/<subjectId>", "host": ["{{baseUrl}}"], "path": ["api", "curriculum", "contents", "<subjectId>"] }
-          }
-        },
-        {
-          "name": "30. Get Single Content URL",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
-            "url": { "raw": "{{baseUrl}}/api/curriculum/content-url/<contentId>", "host": ["{{baseUrl}}"], "path": ["api", "curriculum", "content-url", "<contentId>"] }
-          }
-        },
-        {
-          "name": "30b. Get HLS Stream URL",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
-            "url": { "raw": "{{baseUrl}}/api/curriculum/stream-url/<contentId>", "host": ["{{baseUrl}}"], "path": ["api", "curriculum", "stream-url", "<contentId>"] }
-          }
-        },
-        {
-          "name": "31. Search Everything",
-          "request": {
-            "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{studentToken}}" }],
-            "url": { 
-              "raw": "{{baseUrl}}/api/curriculum/search?q=maths&branch=<branchId>", 
-              "host": ["{{baseUrl}}"], 
-              "path": ["api", "curriculum", "search"],
-              "query": [
-                { "key": "q", "value": "maths" },
-                { "key": "branch", "value": "<branchId>" }
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
               ]
             }
           }
@@ -336,24 +241,954 @@
       ]
     },
     {
-      "name": "👤 4. User Profile",
+      "name": "🛡️ 2. Admin Operations",
+      "description": "Requires Admin JWT token. isLoggedIn + isAdmin middleware on all routes.",
       "auth": {
         "type": "bearer",
-        "bearer": [{ "key": "token", "value": "{{studentToken}}", "type": "string" }]
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{adminToken}}",
+            "type": "string"
+          }
+        ]
       },
       "item": [
         {
-          "name": "32. Get My Profile",
+          "name": "8. Dashboard Stats",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/user/me", "host": ["{{baseUrl}}"], "path": ["api", "user", "me"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/dashboard-stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "dashboard-stats"
+              ]
+            }
           }
         },
         {
-          "name": "33. Get My Payment History",
+          "name": "9. Unlock Device",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@test.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/security/unlock-device",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "security",
+                "unlock-device"
+              ]
+            }
+          }
+        },
+        {
+          "name": "10. Toggle Ban User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@test.com\",\n  \"banDays\": 7,\n  \"reason\": \"Sharing credentials\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/security/toggle-ban",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "security",
+                "toggle-ban"
+              ]
+            }
+          }
+        },
+        {
+          "name": "11. Get Suspicious Logs",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/user/payments", "host": ["{{baseUrl}}"], "path": ["api", "user", "payments"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/security/suspicious-logs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "security",
+                "suspicious-logs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "12. Reveal User Password (checkUserPassword)",
+          "description": "Decrypts and returns stored password for the given email. Admin-only.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@test.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/security/reveal-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "security",
+                "reveal-password"
+              ]
+            }
+          }
+        },
+        {
+          "name": "13. Give/Revoke Manual Access",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@test.com\",\n  \"semesterId\": \"<ID>\",\n  \"action\": \"grant\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/manual-access",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "manual-access"
+              ]
+            },
+            "description": "action = grant | revoke. Can use userId instead of email."
+          }
+        },
+        {
+          "name": "14. Bulk Upload Students (CSV)",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/bulk-upload",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "bulk-upload"
+              ]
+            }
+          }
+        },
+        {
+          "name": "15. Force Change User Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"<Target_User_ID>\",\n  \"newPassword\": \"NewPass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/update-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "update-password"
+              ]
+            }
+          }
+        },
+        {
+          "name": "16. Create Branch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Computer Engineering\",\n  \"shortName\": \"CO\",\n  \"description\": \"CS Branch\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/branch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "branch"
+              ]
+            }
+          }
+        },
+        {
+          "name": "17. Create Semester",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": \"<ID>\",\n  \"title\": \"Semester 1\",\n  \"description\": \"1st Sem\",\n  \"price\": 499\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/semester",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "semester"
+              ]
+            }
+          }
+        },
+        {
+          "name": "18. Create Subject",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": \"<ID>\",\n  \"semesterId\": \"<ID>\",\n  \"name\": \"Mathematics\",\n  \"orderIndex\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/subject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "subject"
+              ]
+            }
+          }
+        },
+        {
+          "name": "19. Reorder Subjects",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderedIds\": [\n    \"<Sub_ID_1>\",\n    \"<Sub_ID_2>\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/subject/reorder",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "subject",
+                "reorder"
+              ]
+            }
+          }
+        },
+        {
+          "name": "20. Toggle Semester Publish",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/semester/<semesterId>/toggle-publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "semester",
+                "<semesterId>",
+                "toggle-publish"
+              ]
+            }
+          }
+        },
+        {
+          "name": "21. Upload Video/PDF (Bunny CDN)",
+          "description": "Uploads file to Bunny CDN then saves to DB. If upload fails at any step, orphaned Bunny video is auto-deleted. No DB entry on failure.",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "subjectId",
+                  "value": "<ID>",
+                  "type": "text"
+                },
+                {
+                  "key": "unit",
+                  "value": "Unit 1",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": "Lecture 1: Intro to ACN",
+                  "type": "text"
+                },
+                {
+                  "key": "type",
+                  "value": "video",
+                  "type": "text",
+                  "description": "video | pdf | notes"
+                },
+                {
+                  "key": "orderSequence",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "Resources",
+                  "type": "text",
+                  "description": "Optional: Resources, Notes, VVIMP, Question Banks"
+                },
+                {
+                  "key": "bunnyCollectionId",
+                  "value": "",
+                  "type": "text",
+                  "description": "Optional: Bunny Stream Collection GUID (subject folder)"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/content",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "content"
+              ]
+            }
+          }
+        },
+        {
+          "name": "22. Add Content (Link Existing Bunny Video)",
+          "description": "Link an already-uploaded Bunny video by its GUID. fileKey is auto-sanitized (strips library prefix).",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectId\": \"<ID>\",\n  \"title\": \"Lecture 2: HLS Stream\",\n  \"type\": \"video\",\n  \"orderSequence\": 2,\n  \"unit\": \"Unit 1\",\n  \"category\": \"Resources\",\n  \"fileKey\": \"c3e819d3-1501-4160-94bc-a9791d2244c1\",\n  \"bunnyLibraryId\": \"722568\",\n  \"bunnyCollectionId\": \"<Collection_ID>\",\n  \"isFree\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/content/add",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "content",
+                "add"
+              ]
+            }
+          }
+        },
+        {
+          "name": "23. Toggle Content Free/Paid",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/content/<contentId>/toggle-free",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "content",
+                "<contentId>",
+                "toggle-free"
+              ]
+            }
+          }
+        },
+        {
+          "name": "24. Upload Dynamic Banner",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "actionUrl",
+                  "value": "app://semester/<ID>",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/banner",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "banner"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📚 3. Curriculum (Student App)",
+      "item": [
+        {
+          "name": "25. Get Home Banner (Public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/curriculum/banner",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "curriculum",
+                "banner"
+              ]
+            }
+          }
+        },
+        {
+          "name": "26. Get All Branches (Public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/curriculum/branches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "curriculum",
+                "branches"
+              ]
+            }
+          }
+        },
+        {
+          "name": "27. Get Trending Courses (Public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/curriculum/courses/trending",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "curriculum",
+                "courses",
+                "trending"
+              ]
+            }
+          }
+        },
+        {
+          "name": "28. Get Free Demo Contents (Public)",
+          "description": "Returns free videos with bunnyVideoId and hlsUrl pre-built.",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/curriculum/contents/free",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "curriculum",
+                "contents",
+                "free"
+              ]
+            }
+          }
+        },
+        {
+          "name": "29. Get Semesters by Branch",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{studentToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/curriculum/semesters/<branchId>",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "curriculum",
+                "semesters",
+                "<branchId>"
+              ]
+            }
+          }
+        },
+        {
+          "name": "30. Get Subjects by Semester",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{studentToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/curriculum/subjects/<semesterId>",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "curriculum",
+                "subjects",
+                "<semesterId>"
+              ]
+            }
+          }
+        },
+        {
+          "name": "31. Get Contents by Subject (Smart Lock)",
+          "description": "Locked content: isLocked=true, bunnyVideoId=null. Purchased/free: includes bunnyVideoId + hlsUrl.",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{studentToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/curriculum/contents/<subjectId>",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "curriculum",
+                "contents",
+                "<subjectId>"
+              ]
+            }
+          }
+        },
+        {
+          "name": "32. Get Single Content URL",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{studentToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/curriculum/content-url/<contentId>",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "curriculum",
+                "content-url",
+                "<contentId>"
+              ]
+            }
+          }
+        },
+        {
+          "name": "33. Get Free Stream URL",
+          "description": "Returns HLS + MP4 URL. Returns 403 if content is not free.",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{studentToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/curriculum/free-stream-url/<contentId>",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "curriculum",
+                "free-stream-url",
+                "<contentId>"
+              ]
+            }
+          }
+        },
+        {
+          "name": "34. Get HLS Stream URL (Enrolled)",
+          "description": "Requires semester enrollment. Returns videoUrl (HLS m3u8) + videoDirectUrl (720p MP4).",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{studentToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/curriculum/stream-url/<contentId>",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "curriculum",
+                "stream-url",
+                "<contentId>"
+              ]
+            }
+          }
+        },
+        {
+          "name": "35. Search Curriculum",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{studentToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/curriculum/search?q=maths&branch=all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "curriculum",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "maths"
+                },
+                {
+                  "key": "branch",
+                  "value": "all"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎬 4. Content Stream (Direct)",
+      "description": "Login required.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{studentToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "36. Get Stream URL",
+          "description": "Returns HLS + MP4 URL using centralized URL builder with auto sanitization.",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/content/stream/<contentId>",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "content",
+                "stream",
+                "<contentId>"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👤 5. User Profile",
+      "description": "Login required. Rate-limited.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{studentToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "37. Get My Profile",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/user/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "38. Get My Payment History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/user/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "payments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "39. Change My Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oldPassword\": \"CurrentPass123!\",\n  \"newPassword\": \"NewPass123!\",\n  \"confirmNewPassword\": \"NewPass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/user/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "change-password"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💰 6. Payments (Razorpay)",
+      "description": "Login required.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{studentToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "40. Create Razorpay Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"semesterId\": \"<ID>\",\n  \"amount\": 499\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/create-order",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payment",
+                "create-order"
+              ]
+            }
+          }
+        },
+        {
+          "name": "41. Verify Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razorpay_order_id\": \"order_xxx\",\n  \"razorpay_payment_id\": \"pay_xxx\",\n  \"razorpay_signature\": \"sig_xxx\",\n  \"semesterId\": \"<ID>\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/verify-payment",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payment",
+                "verify-payment"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏥 7. Health Check",
+      "item": [
+        {
+          "name": "42. Health Check (Public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
           }
         }
       ]

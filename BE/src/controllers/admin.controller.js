@@ -9,7 +9,7 @@ import ApiError from "../utils/apiError.utils.js";
 import csv from 'csvtojson'; 
 import fs from 'fs'; // 👈 Added 'fs' for safe temp file cleanup
 import axios from 'axios';
-import { createBunnyVideo, uploadBunnyVideo } from '../config/bunny.js';
+import { createBunnyVideo, uploadBunnyVideo, deleteBunnyVideo } from '../config/bunny.js';
 // ==========================================
 // 📊 1. DASHBOARD STATS (Ultra Optimized)
 // ==========================================
@@ -214,6 +214,7 @@ export const uploadCourseContent = catchAsync(async (req, res) => {
 
     let fileUrl = req.file.filename;
     let finalFileKey = req.file.filename;
+    let sanitizedVideoId = null; // Track for cleanup on DB failure
 
     if (type.toLowerCase() === "video") {
         try {
@@ -221,24 +222,37 @@ export const uploadCourseContent = catchAsync(async (req, res) => {
             
             // 1. Create a video object in Bunny Stream (optionally in a collection)
             const videoId = await createBunnyVideo(title, bunnyCollectionId || null);
-            console.log(`✅ Video object created with ID: ${videoId}`);
+            // Defensive: strip any accidental library prefix from the GUID
+            sanitizedVideoId = videoId.includes('/') ? videoId.split('/').pop() : videoId;
+            console.log(`✅ Video object created with ID: ${sanitizedVideoId}`);
 
             // 2. Upload the actual video file binary
-            await uploadBunnyVideo(videoId, req.file.path);
-            console.log(`✅ Video uploaded to Bunny Stream successfully!`);
+            try {
+                await uploadBunnyVideo(sanitizedVideoId, req.file.path);
+                console.log(`✅ Video uploaded to Bunny Stream successfully!`);
+            } catch (uploadError) {
+                // ⚡ Upload failed — clean up the orphaned video object on Bunny
+                console.error("❌ Video binary upload failed. Cleaning up orphaned Bunny video...");
+                try {
+                    await deleteBunnyVideo(sanitizedVideoId);
+                    console.log(`🗑️ Orphaned video ${sanitizedVideoId} deleted from Bunny.`);
+                } catch (cleanupError) {
+                    console.error("⚠️ Failed to cleanup orphaned Bunny video:", cleanupError.message);
+                }
+                throw uploadError; // Re-throw to hit the outer catch
+            }
 
             // Use Bunny Video ID as the fileKey
-            finalFileKey = videoId;
+            finalFileKey = sanitizedVideoId;
             const hostname = (process.env.BUNNY_STREAM_HOSTNAME || '').replace(/^https?:\/\//, '').trim();
-            fileUrl = `https://${hostname}/${videoId}/playlist.m3u8`;
+            fileUrl = `https://${hostname}/${sanitizedVideoId}/playlist.m3u8`;
 
         } catch (error) {
             console.error("FULL UPLOAD ERROR:", error.response ? error.response.data : error.message);
             return res.status(500).json({
                 status: false,
-                message: "Failed to upload video to Bunny CDN.",
-                errorDetail: error.response?.data || error.message || "Unknown error",
-                stack: error.stack
+                message: "Failed to upload video to Bunny CDN. No database entry was created.",
+                errorDetail: error.response?.data || error.message || "Unknown error"
             });
         } finally {
             // Guaranteed cleanup on success or failure for video files
@@ -272,11 +286,21 @@ export const uploadCourseContent = catchAsync(async (req, res) => {
             data: newContent 
         });
     } catch (dbError) {
+        // ⚡ DB save failed — clean up the already-uploaded Bunny video to prevent orphans
+        if (type.toLowerCase() === "video" && sanitizedVideoId) {
+            console.error("❌ DB save failed after Bunny upload. Cleaning up Bunny video...");
+            try {
+                await deleteBunnyVideo(sanitizedVideoId);
+                console.log(`🗑️ Bunny video ${sanitizedVideoId} deleted after DB failure.`);
+            } catch (cleanupError) {
+                console.error("⚠️ Failed to cleanup Bunny video after DB error:", cleanupError.message);
+            }
+        }
         // If DB insertion fails, prevent disk bloat for non-video files
         if (type.toLowerCase() !== "video" && req.file && fs.existsSync(req.file.path)) {
             fs.unlinkSync(req.file.path);
         }
-        throw new ApiError(500, "Database error: Failed to save content record.");
+        throw new ApiError(500, "Database error: Failed to save content record. Bunny video was cleaned up.");
     }
 });
 
@@ -288,6 +312,9 @@ export const createContent = catchAsync(async (req, res) => {
         throw new ApiError(400, "Missing required fields: subjectId, unit, title, type, orderSequence.");
     }
 
+    // Sanitize fileKey: strip accidental library prefix
+    const sanitizedFileKey = fileKey && fileKey.includes('/') ? fileKey.split('/').pop() : fileKey;
+
     // Create the content with the Bunny fileKey, library ID, and collection ID
     const newContent = await Content.create({
         subjectId,
@@ -295,7 +322,7 @@ export const createContent = catchAsync(async (req, res) => {
         title,
         type: type.toLowerCase(),
         category: category || "Resources",
-        fileKey,
+        fileKey: sanitizedFileKey,
         // Accept explicit bunnyLibraryId from body, or fall back to the current env var
         bunnyLibraryId: type.toLowerCase() === 'video'
             ? (bunnyLibraryId || process.env.BUNNY_STREAM_LIBRARY_ID || null)
