@@ -31,3 +31,18 @@ export const authLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
 });
+
+// 🎥 STREAM APIS KE LIYE (Video URL abuse se bachne ke liye)
+// 20 requests per minute per IP — generous for normal video switching,
+// but prevents aggressive refreshing from overwhelming 0.1 vCPU Render
+export const streamLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute window
+    max: 20, // 20 stream URL requests per minute per IP
+    keyGenerator: getRealIp,
+    message: { 
+        status: false, 
+        message: "Too many stream requests. Please slow down and try again in a minute." 
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
