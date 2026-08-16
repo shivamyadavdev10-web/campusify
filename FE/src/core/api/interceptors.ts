@@ -1,19 +1,31 @@
 import { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-// ==========================================
 // SecureStore Keys — must match auth.store.ts
-// ==========================================
 const KEYS = {
   ACCESS_TOKEN: 'jwt_token',
   REFRESH_TOKEN: 'refresh_token',
 } as const;
 
-// Lazy getter — breaks the require cycle by not importing auth.store at module load time.
-// Instead we resolve the store only when a request/response actually fires.
+// Lazy getter — breaks the require cycle
 const getAuthStore = () => {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('../stores/auth.store').useAuthStore;
+};
+
+// Track if a token refresh is already in progress
+let isRefreshing = false;
+let failedQueue: Array<{ resolve: (token: string) => void; reject: (error: any) => void }> = [];
+
+// Process queued requests after refresh completes
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token!);
+    }
+  });
+  failedQueue = [];
 };
 
 export const setupInterceptors = (axiosInstance: AxiosInstance) => {
@@ -67,35 +79,80 @@ export const setupInterceptors = (axiosInstance: AxiosInstance) => {
         return Promise.reject(error);
       }
 
+      const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
       const { status, data } = error.response;
       const authStore = getAuthStore();
       const hasToken = authStore.getState().token;
 
-      if (status === 401 && hasToken) {
-        // RACE CONDITION FIX:
-        // If multiple requests are sent simultaneously when the token is expired,
-        // the first request rotates the token, and subsequent requests fail with 401
-        // because their refresh token is now invalid in the database.
-        // We check if the token used for this failed request is older than our current token.
-        const tokenUsed = (error.config?.headers?.Authorization as string)?.replace('Bearer ', '');
+      // ── 401 Handling: Retry with refresh token before giving up ──
+      if (status === 401 && hasToken && !originalRequest._retry) {
+        // Check if another request already refreshed the token
+        const tokenUsed = (originalRequest.headers?.Authorization as string)?.replace('Bearer ', '');
         const currentToken = authStore.getState().token;
-        
+
         if (tokenUsed && currentToken && tokenUsed !== currentToken) {
-           // Another request already refreshed the token! Retry this request with the new token.
-           if (error.config) {
-             error.config.headers.Authorization = `Bearer ${currentToken}`;
-             return axiosInstance.request(error.config);
-           }
+          // Another request already refreshed — retry with new token
+          originalRequest.headers.Authorization = `Bearer ${currentToken}`;
+          return axiosInstance.request(originalRequest);
         }
 
-        // 401 = definitively not authenticated.
-        // The backend middleware already tried to auto-refresh using the refresh token.
-        // If we still got 401, BOTH tokens are invalid → force logout.
+        // If refresh is already in progress, queue this request
+        if (isRefreshing) {
+          return new Promise((resolve, reject) => {
+            failedQueue.push({
+              resolve: (token: string) => {
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+                resolve(axiosInstance.request(originalRequest));
+              },
+              reject,
+            });
+          });
+        }
+
+        // Mark as retrying so we don't loop
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        try {
+          // Retry the original request — backend will auto-refresh via x-refresh-token header
+          const refreshToken = await SecureStore.getItemAsync(KEYS.REFRESH_TOKEN).catch(() => null);
+          if (!refreshToken) {
+            // No refresh token = can't recover, logout
+            throw new Error('No refresh token');
+          }
+
+          // Make a lightweight call to trigger backend auto-refresh
+          // The backend isLoggedIn middleware will generate new tokens
+          originalRequest.headers['x-refresh-token'] = refreshToken;
+          // Remove expired access token so backend uses refresh token path
+          delete originalRequest.headers.Authorization;
+
+          const retryResponse = await axiosInstance.request(originalRequest);
+
+          // If we got here, backend refreshed tokens (check headers)
+          const newToken = retryResponse.headers?.['x-new-access-token'] || authStore.getState().token;
+          if (newToken) {
+            processQueue(null, newToken);
+          }
+
+          return retryResponse;
+        } catch (refreshError) {
+          // Refresh also failed — session is truly dead, logout
+          processQueue(refreshError, null);
+          await authStore.getState().logout();
+          return Promise.reject(refreshError);
+        } finally {
+          isRefreshing = false;
+        }
+      }
+
+      // ── 401 after retry = session is dead ──
+      if (status === 401 && hasToken && originalRequest._retry) {
         await authStore.getState().logout();
-      } else if (status === 403 && hasToken) {
-        // 403 can mean:
-        // a) Device kick-out / ban → must logout
-        // b) Content paywall (locked video) → do NOT logout
+      }
+
+      // ── 403 Handling: Only logout for auth-related 403s ──
+      if (status === 403 && hasToken) {
         const msg: string = ((data as any)?.message || '').toLowerCase();
         const isAuthError =
           msg.includes('session') ||

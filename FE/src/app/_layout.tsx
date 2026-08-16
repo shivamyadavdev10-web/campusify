@@ -5,7 +5,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/src/core/api/queryClient';
 import { useAuthStore } from '@/src/core/stores/auth.store';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, BackHandler, Alert, Platform } from 'react-native';
 import ToastRenderer from '@/src/components/ui/ToastRenderer';
 import { useNetInfo } from '@react-native-community/netinfo';
 import * as Sentry from '@sentry/react-native';
@@ -55,6 +55,31 @@ function RootLayout() {
       router.replace('/(tabs)');
     }
   }, [token, isLoading, segments]);
+
+  // Android back button — show exit confirmation on home screen
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const onBackPress = () => {
+      // Only show exit popup when on the main tabs (home screen)
+      const inTabs = segments[0] === '(tabs)';
+      if (inTabs) {
+        Alert.alert(
+          'Exit App',
+          'Are you sure you want to exit?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Exit', style: 'destructive', onPress: () => BackHandler.exitApp() },
+          ]
+        );
+        return true; // Prevent default back behavior
+      }
+      return false; // Let default back behavior happen (go back)
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [segments]);
 
   // Show a proper loading screen while auth is being checked
   if (isLoading) {

@@ -1,5 +1,5 @@
-import React, { useState, useCallback, Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Platform, Modal, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback, useEffect, useRef, Component, ErrorInfo, ReactNode } from 'react';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Platform, Modal, ActivityIndicator, Linking, Dimensions } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/src/core/api/client';
 import { Skeleton } from '@/src/components/ui/Skeleton';
@@ -140,38 +140,79 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Hero Banner - Dynamic */}
-          {bannerData?.banner ? (
-            <View className="bg-[#4182f9] rounded-2xl p-5 mb-6" style={cardShadowMd}>
-              {bannerData.banner.subtitle && (
+          {/* Hero Banners — Auto-scrolling carousel (dynamic from API) */}
+          {(() => {
+            // Support both single banner and multiple banners from API
+            const banners = bannerData?.banners || (bannerData?.banner ? [bannerData.banner] : []);
+            const screenWidth = Dimensions.get('window').width - 40; // px-5 padding both sides
+
+            if (banners.length > 0) {
+              return (
+                <View className="mb-6">
+                  <ScrollView
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    style={{ borderRadius: 16, overflow: 'hidden' }}
+                  >
+                    {banners.map((banner: any, idx: number) => (
+                      <TouchableOpacity
+                        key={banner._id || idx}
+                        activeOpacity={0.9}
+                        style={[{ width: screenWidth }, cardShadowMd]}
+                        className="bg-[#4182f9] rounded-2xl p-5"
+                        onPress={() => {
+                          if (banner.actionUrl) {
+                            Linking.openURL(banner.actionUrl).catch(() => {});
+                          } else {
+                            router.push('/search');
+                          }
+                        }}
+                      >
+                        {banner.subtitle && (
+                          <View className="bg-[#5c95fa] self-start px-3 py-1.5 rounded-full flex-row items-center mb-3">
+                            <Megaphone color="#ffffff" size={14} />
+                            <Text className="text-white text-[11px] font-semibold ml-2">{banner.subtitle}</Text>
+                          </View>
+                        )}
+                        <Text className="text-white text-[22px] leading-tight font-bold mb-4 pr-6">
+                          {banner.title || 'Explore Our Courses'}
+                        </Text>
+                        <View className="bg-white self-start px-5 py-2.5 rounded-xl">
+                          <Text className="text-[#4182f9] font-bold text-sm">Explore Courses</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  {/* Dot indicators for multiple banners */}
+                  {banners.length > 1 && (
+                    <View className="flex-row justify-center mt-3" style={{ gap: 6 }}>
+                      {banners.map((_: any, idx: number) => (
+                        <View key={idx} className="w-2 h-2 rounded-full bg-[#4182f9]" style={{ opacity: idx === 0 ? 1 : 0.3 }} />
+                      ))}
+                    </View>
+                  )}
+                </View>
+              );
+            }
+
+            // Fallback banner when API returns nothing
+            return (
+              <View className="bg-[#4182f9] rounded-2xl p-5 mb-6" style={cardShadowMd}>
                 <View className="bg-[#5c95fa] self-start px-3 py-1.5 rounded-full flex-row items-center mb-3">
                   <Megaphone color="#ffffff" size={14} />
-                  <Text className="text-white text-[11px] font-semibold ml-2">{bannerData.banner.subtitle}</Text>
+                  <Text className="text-white text-[11px] font-semibold ml-2">Welcome to Campusify</Text>
                 </View>
-              )}
-              <Text className="text-white text-[22px] leading-tight font-bold mb-4 pr-6">{bannerData.banner.title || 'Explore Our Courses'}</Text>
-              <TouchableOpacity 
-                className="bg-white self-start px-5 py-2.5 rounded-xl active:opacity-90"
-                onPress={() => router.push('/search')}
-              >
-                <Text className="text-[#4182f9] font-bold text-sm">Explore Courses</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View className="bg-[#4182f9] rounded-2xl p-5 mb-6" style={cardShadowMd}>
-              <View className="bg-[#5c95fa] self-start px-3 py-1.5 rounded-full flex-row items-center mb-3">
-                <Megaphone color="#ffffff" size={14} />
-                <Text className="text-white text-[11px] font-semibold ml-2">Welcome to Campusify</Text>
+                <Text className="text-white text-[22px] leading-tight font-bold mb-4 pr-6">Master your Diploma Exams</Text>
+                <TouchableOpacity
+                  className="bg-white self-start px-5 py-2.5 rounded-xl active:opacity-90"
+                  onPress={() => router.push('/search')}
+                >
+                  <Text className="text-[#4182f9] font-bold text-sm">Explore Courses</Text>
+                </TouchableOpacity>
               </View>
-              <Text className="text-white text-[22px] leading-tight font-bold mb-4 pr-6">Master your Diploma Exams</Text>
-              <TouchableOpacity 
-                className="bg-white self-start px-5 py-2.5 rounded-xl active:opacity-90"
-                onPress={() => router.push('/search')}
-              >
-                <Text className="text-[#4182f9] font-bold text-sm">Explore Courses</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+            );
+          })()}
 
           {/* ═══════ Quick Links Grid — Tabbed Style ═══════ */}
           <View className="flex-row justify-between mb-6 px-2">
@@ -307,9 +348,12 @@ export default function HomeScreen() {
                         <View className="w-[46px] h-[46px] rounded-[14px] bg-[#f0f5ff] flex items-center justify-center mr-4">
                           <GraduationCap color="#4182f9" size={22} strokeWidth={2} />
                         </View>
+                        {/* Branch name upar, semester code niche */}
                         <View>
                           <Text className="font-semibold text-on-surface text-[15px] mb-0.5">{branch.name || 'Unknown Branch'}</Text>
-                          <Text className="text-on-surface-variant text-xs">{branch.shortName || ''}</Text>
+                          <Text className="text-on-surface-variant text-xs">
+                            {branch.shortName ? `${branch.shortName}` : ''}
+                          </Text>
                         </View>
                       </View>
                       <ChevronRight color="#c1c3ce" size={20} />
@@ -354,7 +398,7 @@ export default function HomeScreen() {
                         key={course._id}
                         className="bg-surface-container-lowest border border-outline-variant rounded-[18px] overflow-hidden active:scale-[0.97]"
                         style={cardShadow}
-                        onPress={() => router.push(`/subjects/${course._id}`)}
+                        onPress={() => Linking.openURL('https://campusifyplus.in/online-classes/')}
                       >
                         <View className="flex-row">
                           {/* Rank badge */}

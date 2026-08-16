@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Platform, Linking } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/src/core/api/client';
 import { Skeleton } from '@/src/components/ui/Skeleton';
@@ -61,7 +61,8 @@ export default function TrendingCoursesScreen() {
               <TouchableOpacity
                 className="bg-surface-container-lowest border border-outline-variant rounded-[18px] overflow-hidden active:scale-[0.97]"
                 style={cardShadow}
-                onPress={() => router.push(`/subjects/${item._id}`)}
+                {/* Redirect to website for course details */}
+                onPress={() => Linking.openURL('https://campusifyplus.in/online-classes/')}
               >
                 <View className="flex-row">
                   {/* Rank badge */}

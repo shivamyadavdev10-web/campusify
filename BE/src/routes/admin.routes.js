@@ -3,7 +3,7 @@ import {
     getDashboardStats, manualAccessOverride, bulkStudentUpload,
     createBranch, createSemester, createSubject, uploadCourseContent, semesterPublish,
     unlockDevice, toggleBanUser, getSuspiciousActivity, checkUserPassword, reorderSubjects,
-    toggleContentFreeStatus, uploadBanner, updateUserPassword, createContent
+    toggleContentFreeStatus, uploadBanner, toggleBanner, deleteBanner, updateUserPassword, createContent
 } from "../controllers/admin.controller.js";
 import { isLoggedIn, isAdmin } from "../middleware/isLoggedIn.middleware.js";
 import { apiLimiter } from "../middleware/rateLimit.middleware.js";
@@ -51,5 +51,7 @@ router.post("/content", upload.single("file"), uploadCourseContent);
 router.post("/content/add", createContent);
 router.patch("/content/:contentId/toggle-free", toggleContentFreeStatus);
 router.post("/banner", upload.single("file"), uploadBanner); // ✅ Banner Upload
+router.patch("/banner/:bannerId/toggle", toggleBanner); // ✅ Toggle Banner Active/Inactive
+router.delete("/banner/:bannerId", deleteBanner); // ✅ Delete Banner
 
 export default router;

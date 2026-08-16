@@ -703,14 +703,25 @@
         },
         {
           "name": "24. Upload Dynamic Banner",
+          "description": "Uploads new banner. Multiple banners can be active simultaneously for carousel.",
           "request": {
             "method": "POST",
             "body": {
               "mode": "formdata",
               "formdata": [
                 {
+                  "key": "title",
+                  "value": "Master Your Exams",
+                  "type": "text"
+                },
+                {
+                  "key": "subtitle",
+                  "value": "New Courses Available",
+                  "type": "text"
+                },
+                {
                   "key": "actionUrl",
-                  "value": "app://semester/<ID>",
+                  "value": "https://campusifyplus.in/online-classes/",
                   "type": "text"
                 },
                 {
@@ -732,6 +743,45 @@
               ]
             }
           }
+        },
+        {
+          "name": "24b. Toggle Banner Active/Inactive",
+          "description": "Toggle isActive status of a specific banner.",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/banner/<bannerId>/toggle",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "banner",
+                "<bannerId>",
+                "toggle"
+              ]
+            }
+          }
+        },
+        {
+          "name": "24c. Delete Banner",
+          "description": "Permanently delete a banner.",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/banner/<bannerId>",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "banner",
+                "<bannerId>"
+              ]
+            }
+          }
         }
       ]
     },
@@ -739,7 +789,8 @@
       "name": "📚 3. Curriculum (Student App)",
       "item": [
         {
-          "name": "25. Get Home Banner (Public)",
+          "name": "25. Get All Active Banners (Public)",
+          "description": "Returns array of all active banners for home screen carousel.",
           "request": {
             "method": "GET",
             "url": {

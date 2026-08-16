@@ -369,8 +369,10 @@ export const toggleContentFreeStatus = catchAsync(async (req, res) => {
 });
 
 // ==========================================
-// 🖼️ BANNER UPLOAD
+// 🖼️ BANNER MANAGEMENT (Multiple Banners Supported)
 // ==========================================
+
+// Upload new banner — now supports multiple active banners
 export const uploadBanner = catchAsync(async (req, res) => {
     let imageUrl = req.body.imageUrl;
     
@@ -383,17 +385,37 @@ export const uploadBanner = catchAsync(async (req, res) => {
         throw new ApiError(400, "Please provide an image file or imageUrl for the banner.");
     }
 
-    // Inactivate old banners
-    await Banner.updateMany({}, { isActive: false });
-
-    // Create new active banner
+    // Create new active banner (purane banners active rahenge)
     const banner = await Banner.create({
         imageUrl,
+        title: req.body.title || "",
+        subtitle: req.body.subtitle || "",
         actionUrl: req.body.actionUrl || "",
         isActive: true
     });
 
     res.status(201).json({ status: true, message: "Banner uploaded successfully", banner });
+});
+
+// Toggle banner active/inactive status
+export const toggleBanner = catchAsync(async (req, res) => {
+    const { bannerId } = req.params;
+    const banner = await Banner.findById(bannerId);
+    if (!banner) throw new ApiError(404, "Banner not found.");
+
+    banner.isActive = !banner.isActive;
+    await banner.save();
+
+    res.status(200).json({ status: true, message: `Banner ${banner.isActive ? 'activated' : 'deactivated'}`, banner });
+});
+
+// Delete a banner permanently
+export const deleteBanner = catchAsync(async (req, res) => {
+    const { bannerId } = req.params;
+    const banner = await Banner.findByIdAndDelete(bannerId);
+    if (!banner) throw new ApiError(404, "Banner not found.");
+
+    res.status(200).json({ status: true, message: "Banner deleted successfully" });
 });
 
 // ==========================================

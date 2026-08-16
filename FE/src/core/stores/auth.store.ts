@@ -158,10 +158,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   checkAuth: async () => {
     try {
+      // Check if tokens exist in SecureStore
       const token = await SecureStore.getItemAsync(KEYS.ACCESS_TOKEN);
+      const refreshToken = await SecureStore.getItemAsync(KEYS.REFRESH_TOKEN);
+
       if (token) {
+        // Token exists — let it be used. If expired, the interceptor will auto-refresh.
         set({ token, isAuthenticated: true, isLoading: false });
+      } else if (refreshToken) {
+        // Access token missing but refresh token exists — user was logged in.
+        // Set authenticated so the app goes to home, interceptor will get new access token on first API call.
+        set({ token: 'pending_refresh', isAuthenticated: true, isLoading: false });
       } else {
+        // No tokens at all — user needs to login
         set({ token: null, isAuthenticated: false, isLoading: false });
       }
     } catch {

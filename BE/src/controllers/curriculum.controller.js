@@ -258,9 +258,9 @@ export const getFreeStreamUrl = catchAsync(async (req, res) => {
     res.status(200).json({ success: true, videoUrl, videoDirectUrl });
 });
 
-// 🖼️ Fetch Active Banner for Home Screen
+// 🖼️ Fetch All Active Banners for Home Screen Carousel
 export const getBanner = catchAsync(async (req, res) => {
-    // Only return the latest active banner (or limit 1)
-    const banner = await Banner.findOne({ isActive: true }).sort({ createdAt: -1 });
-    res.status(200).json({ status: true, banner });
+    // Return all active banners sorted by newest first
+    const banners = await Banner.find({ isActive: true }).sort({ createdAt: -1 });
+    res.status(200).json({ status: true, banners });
 });

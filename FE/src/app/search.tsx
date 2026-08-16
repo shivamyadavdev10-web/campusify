@@ -6,7 +6,7 @@ import { Skeleton } from '@/src/components/ui/Skeleton';
 import { EmptyState } from '@/src/components/ui/EmptyState';
 import { ErrorState } from '@/src/components/ui/ErrorState';
 import { useRouter } from 'expo-router';
-import { Search as SearchIcon, Filter, ChevronRight, GraduationCap } from 'lucide-react-native';
+import { Search as SearchIcon, Filter, ChevronRight, GraduationCap, ArrowLeft } from 'lucide-react-native';
 
 // Helper hook
 function useDebounceHook(value: string, delay: number) {
@@ -31,8 +31,16 @@ export default function SearchScreen() {
 
   return (
     <View className="flex-1 bg-[#f8f9ff] pt-12 px-5">
-      {/* Search Section */}
+      {/* Search Header — back button + search bar */}
       <View className="flex-row items-center gap-3 mb-6">
+        {/* Back Button */}
+        <TouchableOpacity 
+          onPress={() => router.back()} 
+          className="w-10 h-10 rounded-full bg-white border border-[#e5e7eb] items-center justify-center"
+          style={{ elevation: 2 }}
+        >
+          <ArrowLeft color="#0b1c30" size={20} />
+        </TouchableOpacity>
         <View className="flex-1 flex-row items-center bg-white border border-[#e5e7eb] rounded-full px-4 h-12" style={{ elevation: 2 }}>
           <SearchIcon color="#737686" size={20} />
           <TextInput

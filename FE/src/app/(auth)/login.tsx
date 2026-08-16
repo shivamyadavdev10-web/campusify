@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/src/core/stores/auth.store';
 import { useUIStore } from '@/src/core/stores/ui.store';
@@ -88,12 +88,17 @@ export default function LoginScreen() {
         <Text className="text-[#3b82f6] text-[14px]">Forgot Password?</Text>
       </TouchableOpacity>
 
+      {/* Login Button — shows loading spinner during authentication */}
       <TouchableOpacity 
-        className="bg-[#3b82f6] rounded-xl py-4 flex-row justify-center items-center active:bg-[#2563eb]"
+        className={`bg-[#3b82f6] rounded-xl py-4 flex-row justify-center items-center active:bg-[#2563eb] ${isSubmitting ? 'opacity-70' : ''}`}
         onPress={handleLogin}
         disabled={isSubmitting}
       >
-        <Text className="text-white font-medium text-[16px]">Sign In</Text>
+        {isSubmitting ? (
+          <ActivityIndicator color="#ffffff" size="small" />
+        ) : (
+          <Text className="text-white font-medium text-[16px]">Sign In</Text>
+        )}
       </TouchableOpacity>
 
       <View className="flex-row justify-center mt-8 mb-12">

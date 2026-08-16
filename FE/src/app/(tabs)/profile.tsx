@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, Linking } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/src/core/api/client';
 import { useAuthStore } from '@/src/core/stores/auth.store';
@@ -7,7 +7,7 @@ import { useUIStore } from '@/src/core/stores/ui.store';
 import { Skeleton } from '@/src/components/ui/Skeleton';
 import { ErrorState } from '@/src/components/ui/ErrorState';
 import { getInitials } from '@/src/utils/helpers.utils';
-import { LogOut, BookOpen, CreditCard, Mail, Phone, Lock, ChevronRight, CheckCircle2 } from 'lucide-react-native';
+import { LogOut, BookOpen, CreditCard, Mail, Phone, Lock, ChevronRight, CheckCircle2, MessageCircle, Bug } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 
@@ -103,8 +103,8 @@ export default function ProfileScreen() {
         <Text className="text-[15px] text-on-surface font-medium mb-3 px-1">Account & Support</Text>
         <View className="bg-surface-container-lowest rounded-[24px] p-2 shadow-sm border border-outline-variant">
           
-          {/* Contact Support */}
-          <TouchableOpacity className="flex-row items-center p-3 border-b border-surface-container-highest active:bg-surface-container-lowest rounded-xl">
+          {/* Contact Support — call + WhatsApp */}
+          <View className="flex-row items-center p-3 border-b border-surface-container-highest rounded-xl">
             <View className="w-10 h-10 rounded-full bg-[#f0fdfa] flex items-center justify-center mr-4">
               <Phone color="#0d9488" size={20} />
             </View>
@@ -112,7 +112,14 @@ export default function ProfileScreen() {
               <Text className="text-[15px] font-medium text-on-surface">Contact Support</Text>
               <Text className="text-[13px] text-on-surface-variant mt-0.5">Call: +91 8104131420</Text>
             </View>
-          </TouchableOpacity>
+            {/* WhatsApp DM button */}
+            <TouchableOpacity 
+              className="bg-[#25D366] w-9 h-9 rounded-full items-center justify-center"
+              onPress={() => Linking.openURL('https://wa.me/918104131420')}
+            >
+              <MessageCircle color="#ffffff" size={16} />
+            </TouchableOpacity>
+          </View>
           
           {/* Reset Password */}
           <TouchableOpacity 
@@ -128,10 +135,34 @@ export default function ProfileScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* Log Out */}
+          {/* Report Bugs — WhatsApp redirect */}
+          <TouchableOpacity 
+            className="flex-row items-center p-3 border-b border-surface-container-highest active:bg-surface-container-lowest rounded-xl"
+            onPress={() => Linking.openURL('https://wa.me/918104131420?text=Bug%20Report%3A%20')}
+          >
+            <View className="w-10 h-10 rounded-full bg-[#fef3c7] flex items-center justify-center mr-4">
+              <Bug color="#d97706" size={20} />
+            </View>
+            <View className="flex-1">
+              <Text className="text-[15px] font-medium text-on-surface">Report Bugs</Text>
+              <Text className="text-[13px] text-on-surface-variant mt-0.5">Help us improve the app</Text>
+            </View>
+            <ChevronRight color="#c1c3ce" size={20} />
+          </TouchableOpacity>
+
+          {/* Log Out — with confirmation popup */}
           <TouchableOpacity 
             className="flex-row items-center p-3 active:bg-surface-container-lowest rounded-xl"
-            onPress={() => logout()}
+            onPress={() => {
+              Alert.alert(
+                'Logout',
+                'Are you sure you want to logout?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Yes, Logout', style: 'destructive', onPress: () => logout() },
+                ]
+              );
+            }}
           >
             <View className="w-10 h-10 rounded-full bg-[#fef2f2] flex items-center justify-center mr-4">
               <LogOut color="#ef4444" size={20} />
