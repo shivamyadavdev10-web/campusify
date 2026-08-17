@@ -1,16 +1,20 @@
-import axios from "axios";
+import { Resend } from "resend";
+
+// Initialize Resend client with API key
+const resend = new Resend(process.env.RESEND_API_KEY);
+console.log("📧 Resend email client initialized");
 
 export const sendVerificationEmail = async (email, otp) => {
     // 🛑 Prevent actual emails from being sent during testing to avoid console errors
     if (process.env.NODE_ENV === "test") {
+        console.log(`🧪 [TEST MODE] Skipping email send to ${email} with OTP: ${otp}`);
         return;
     }
 
     try {
-        // 1. ZeptoMail API Endpoint
-        const apiUrl = "https://api.zeptomail.in/v1.1/email"; 
+        console.log(`📤 Attempting to send OTP email to: ${email}`);
 
-        // 2. Email ka design aur content (Aapka exact HTML preserve kiya hai)
+        // Email ka design aur content (Aapka exact HTML preserve kiya hai)
         const htmlContent = `
             <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
                 <h2 style="color: #4CAF50; text-align: center;">Welcome to the Platform!</h2>
@@ -24,38 +28,26 @@ export const sendVerificationEmail = async (email, otp) => {
             </div>
         `;
 
-        // 3. ZeptoMail Payload
-        const payload = {
-            from: { 
-                address: process.env.ZEPTO_FROM_EMAIL, 
-                name: "Campusify Support" 
-            },
-            to: [
-                { 
-                    email_address: { 
-                        address: email, 
-                        name: "Student" 
-                    } 
-                }
-            ],
-            subject: "Your Secure OTP for Login/Signup",
-            htmlbody: htmlContent,
-        };
+        console.log(`📋 Email payload prepared — From: ${process.env.RESEND_FROM_EMAIL}, To: ${email}, Subject: "Your Secure OTP for Login/Signup"`);
 
-        // 4. Email Send karna 
-        await axios.post(apiUrl, payload, {
-            headers: {
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-                "Authorization": `Zoho-enczapikey ${process.env.ZEPTO_API_TOKEN}` 
-            }
+        // Resend API se email bhejo
+        const { data, error } = await resend.emails.send({
+            from: process.env.RESEND_FROM_EMAIL || "Campusify Support <onboarding@resend.dev>",
+            to: [email],
+            subject: "Your Secure OTP for Login/Signup",
+            html: htmlContent,
         });
 
+        if (error) {
+            console.error("❌ Resend API returned an error:", JSON.stringify(error, null, 2));
+            return;
+        }
+
         console.log(`✅ OTP Email successfully sent to ${email}`);
+        console.log(`📨 Resend Response Data:`, JSON.stringify(data, null, 2));
 
     } catch (error) {
-        
-        console.error("❌ Email sending failed:", error.response?.data || error.message);
-        
+        console.error("❌ Email sending failed:", error.message);
+        console.error("🔍 Full error details:", JSON.stringify(error, null, 2));
     }
 };
