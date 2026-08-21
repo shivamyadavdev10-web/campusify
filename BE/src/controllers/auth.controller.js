@@ -52,7 +52,7 @@ export const registerUser = catchAsync(async (req, res) => {
 
   // ⚡ FAST API: Email background me jayega
   console.log("🚀 REGISTER OTP: ", otp);
-  sendVerificationEmail(email, otp);
+  sendVerificationEmail(email, otp, "register");
 
   res.status(201).json({
     status: true,
@@ -232,7 +232,7 @@ export const login = catchAsync(async (req, res) => {
     console.log("🚀 LOGIN NAYA OTP: ", newOtp);
 
     // ⚡ FAST API: Email background me jayega
-    sendVerificationEmail(user.email, newOtp); 
+    sendVerificationEmail(user.email, newOtp, "login"); 
 
     return res.status(403).json({
       status: false,
@@ -279,7 +279,7 @@ export const resendOTP = catchAsync(async (req, res) => {
   }
 
   console.log("🚀 RESEND OTP: ", otp);
-  sendVerificationEmail(email, otp); // Background call
+  sendVerificationEmail(email, otp, "resend"); // Background call
 
   res.status(200).json({ status: true, message: "A new OTP has been sent to your email." });
 });
@@ -304,7 +304,7 @@ export const forgotPassword = catchAsync(async (req, res) => {
   }
 
   console.log("🚀 FORGOT PASSWORD OTP: ", otp);
-  sendVerificationEmail(email, otp); 
+  sendVerificationEmail(email, otp, "forgotPassword"); 
 
   res.status(200).json({ status: true, message: "A password reset OTP has been sent to your email." });
 });
