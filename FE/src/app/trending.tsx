@@ -58,10 +58,10 @@ export default function TrendingCoursesScreen() {
             const branchShort = item.branchId?.shortName || '';
 
             return (
+              // Redirect to website for course details
               <TouchableOpacity
                 className="bg-surface-container-lowest border border-outline-variant rounded-[18px] overflow-hidden active:scale-[0.97]"
                 style={cardShadow}
-                {/* Redirect to website for course details */}
                 onPress={() => Linking.openURL('https://campusifyplus.in/online-classes/')}
               >
                 <View className="flex-row">

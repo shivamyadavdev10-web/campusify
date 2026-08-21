@@ -5,7 +5,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/src/core/api/queryClient';
 import { useAuthStore } from '@/src/core/stores/auth.store';
-import { View, ActivityIndicator, BackHandler, Alert, Platform } from 'react-native';
+import { View, Text, ActivityIndicator, BackHandler, Alert, Platform } from 'react-native';
 import ToastRenderer from '@/src/components/ui/ToastRenderer';
 import { useNetInfo } from '@react-native-community/netinfo';
 import * as Sentry from '@sentry/react-native';

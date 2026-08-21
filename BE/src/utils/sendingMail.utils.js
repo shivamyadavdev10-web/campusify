@@ -1,8 +1,8 @@
-import { Resend } from "resend";
+import axios from "axios";
 
-// Initialize Resend client with API key
-const resend = new Resend(process.env.RESEND_API_KEY);
-console.log("📧 Resend email client initialized");
+// ZeptoMail API Config
+const ZEPTO_API_URL = "https://api.zeptomail.in/v1.1/email";
+console.log("📧 ZeptoMail email client initialized");
 
 // ==========================================
 // Dynamic Email Templates — per purpose
@@ -35,7 +35,7 @@ const EMAIL_TEMPLATES = {
 };
 
 /**
- * Send OTP email via Resend
+ * Send OTP email via ZeptoMail
  * @param {string} email - Recipient email address
  * @param {string} otp - 6-digit OTP code
  * @param {string} purpose - One of: "register", "login", "resend", "forgotPassword"
@@ -69,26 +69,40 @@ export const sendVerificationEmail = async (email, otp, purpose = "register") =>
             </div>
         `;
 
-        console.log(`📋 Email payload — From: ${process.env.RESEND_FROM_EMAIL}, To: ${email}, Subject: "${template.subject}"`);
-
-        // Resend API se email bhejo
-        const { data, error } = await resend.emails.send({
-            from: process.env.RESEND_FROM_EMAIL || "Campusify Support <noreply@campusifyplus.in>",
-            to: [email],
+        // ZeptoMail Payload
+        const payload = {
+            from: { 
+                address: process.env.ZEPTO_FROM_EMAIL, 
+                name: "Campusify Support" 
+            },
+            to: [
+                { 
+                    email_address: { 
+                        address: email, 
+                        name: "Student" 
+                    } 
+                }
+            ],
             subject: template.subject,
-            html: htmlContent,
+            htmlbody: htmlContent,
+        };
+
+        console.log(`📋 Email payload — From: ${process.env.ZEPTO_FROM_EMAIL}, To: ${email}, Subject: "${template.subject}"`);
+
+        // ZeptoMail API se email bhejo
+        const response = await axios.post(ZEPTO_API_URL, payload, {
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "Authorization": process.env.ZEPTO_API_TOKEN
+            }
         });
 
-        if (error) {
-            console.error(`❌ Resend API error [${purpose}]:`, JSON.stringify(error, null, 2));
-            return;
-        }
-
         console.log(`✅ OTP Email sent to ${email} [${purpose}]`);
-        console.log(`📨 Resend Response:`, JSON.stringify(data, null, 2));
+        console.log(`📨 ZeptoMail Response:`, JSON.stringify(response.data, null, 2));
 
     } catch (error) {
-        console.error(`❌ Email sending failed [${purpose}]:`, error.message);
-        console.error("🔍 Full error details:", JSON.stringify(error, null, 2));
+        console.error(`❌ Email sending failed [${purpose}]:`, error.response?.data || error.message);
+        console.error("🔍 Full error details:", JSON.stringify(error.response?.data || error.message, null, 2));
     }
 };
