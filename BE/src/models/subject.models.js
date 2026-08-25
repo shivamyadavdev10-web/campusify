@@ -17,6 +17,13 @@ const subjectSchema = new mongoose.Schema(
       trim: true // Example: "MTH101"
     },
     thumbnail: { type: String },
+    // Bunny Stream Collection GUID — links this subject to its folder on Bunny.net
+    // Created automatically when admin creates/links a subject to Bunny
+    bunnyCollectionId: {
+      type: String,
+      required: false,
+      default: null
+    },
     orderSequence: { 
       type: Number, 
       default: 0 // App me subject ka order

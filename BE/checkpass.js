@@ -5,7 +5,7 @@ dotenv.config({ path: './.env' });
 import { decryptPassword } from './src/models/user.models.js';
 
 // 2. Yahan aap apna Encrypted Password manually change / paste kar sakte hain
-const storedPassword = "yahan_apna_encrypted_password_paste_karein";
+const storedPassword = "";
 
 console.log("=================================");
 console.log("🔑 Secret Key mili? :", process.env.ENCRYPTION_KEY ? "Haan mil gayi!" : "Nahi mili, .env check karo!");

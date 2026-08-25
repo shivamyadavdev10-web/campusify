@@ -3,7 +3,8 @@ import {
     getDashboardStats, manualAccessOverride, bulkStudentUpload,
     createBranch, createSemester, createSubject, uploadCourseContent, semesterPublish,
     unlockDevice, toggleBanUser, getSuspiciousActivity, checkUserPassword, reorderSubjects,
-    toggleContentFreeStatus, uploadBanner, toggleBanner, deleteBanner, updateUserPassword, createContent
+    toggleContentFreeStatus, uploadBanner, toggleBanner, deleteBanner, updateUserPassword,
+    createContent, createSubjectCollection, linkCollectionToSubject
 } from "../controllers/admin.controller.js";
 import { isLoggedIn, isAdmin } from "../middleware/isLoggedIn.middleware.js";
 import { apiLimiter } from "../middleware/rateLimit.middleware.js";
@@ -43,6 +44,9 @@ router.post("/semester", createSemester);
 router.post("/subject", createSubject);
 router.patch("/subject/reorder", reorderSubjects);
 router.patch("/semester/:semesterId/toggle-publish", semesterPublish);
+// 🗂️ Bunny Collection per Subject
+router.post("/subject/:subjectId/create-collection", createSubjectCollection);
+router.patch("/subject/:subjectId/link-collection", linkCollectionToSubject);
 
 // ==========================================
 // 🎬 MEDIA UPLOAD

@@ -7,9 +7,79 @@ import User, { decryptPassword } from "../models/user.models.js";
 import catchAsync from "../utils/catchAsync.utils.js";
 import ApiError from "../utils/apiError.utils.js";
 import csv from 'csvtojson'; 
-import fs from 'fs'; // 👈 Added 'fs' for safe temp file cleanup
+import fs from 'fs';
 import axios from 'axios';
-import { createBunnyVideo, uploadBunnyVideo, deleteBunnyVideo } from '../config/bunny.js';
+import { createBunnyVideo, uploadBunnyVideo, deleteBunnyVideo, createBunnyCollection } from '../config/bunny.js';
+
+// ==========================================
+// 🗂️ BUNNY COLLECTION MANAGEMENT
+// ==========================================
+
+/**
+ * Creates a Bunny Stream Collection for a subject and saves the collectionId
+ * to the Subject document in MongoDB.
+ * 
+ * POST /api/admin/subject/:subjectId/create-collection
+ * Body: { collectionName: "Mathematics" }  ← optional, defaults to subject.name
+ */
+export const createSubjectCollection = catchAsync(async (req, res) => {
+    const { subjectId } = req.params;
+    const subject = await Subject.findById(subjectId);
+    if (!subject) throw new ApiError(404, "Subject not found");
+
+    // Use provided name or fall back to the subject's own name
+    const collectionName = req.body.collectionName || subject.name;
+
+    // If collection already exists — don't create a duplicate
+    if (subject.bunnyCollectionId) {
+        return res.status(200).json({
+            status: true,
+            message: "Collection already exists for this subject",
+            bunnyCollectionId: subject.bunnyCollectionId
+        });
+    }
+
+    // Create the collection on Bunny.net
+    const collectionId = await createBunnyCollection(collectionName);
+
+    // Save collectionId to the subject
+    subject.bunnyCollectionId = collectionId;
+    await subject.save();
+
+    res.status(201).json({
+        status: true,
+        message: `Bunny Collection created for "${subject.name}"`,
+        bunnyCollectionId: collectionId
+    });
+});
+
+/**
+ * Manually link an existing Bunny Collection ID to a subject.
+ * Use this if you created the collection on Bunny dashboard directly.
+ * 
+ * PATCH /api/admin/subject/:subjectId/link-collection
+ * Body: { bunnyCollectionId: "guid-from-bunny" }
+ */
+export const linkCollectionToSubject = catchAsync(async (req, res) => {
+    const { subjectId } = req.params;
+    const { bunnyCollectionId } = req.body;
+
+    if (!bunnyCollectionId) throw new ApiError(400, "bunnyCollectionId is required");
+
+    const subject = await Subject.findByIdAndUpdate(
+        subjectId,
+        { bunnyCollectionId },
+        { new: true }
+    );
+    if (!subject) throw new ApiError(404, "Subject not found");
+
+    res.status(200).json({
+        status: true,
+        message: `Collection linked to "${subject.name}"`,
+        subject
+    });
+});
+
 // ==========================================
 // 📊 1. DASHBOARD STATS (Ultra Optimized)
 // ==========================================

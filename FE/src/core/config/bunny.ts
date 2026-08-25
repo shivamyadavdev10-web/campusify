@@ -5,11 +5,11 @@
 
 // ─── Fallback library ID (used only when API doesn't return one) ──────────────
 export const FALLBACK_BUNNY_LIBRARY_ID =
-  process.env.EXPO_PUBLIC_BUNNY_LIBRARY_ID || '722568';
+  process.env.EXPO_PUBLIC_BUNNY_LIBRARY_ID || '736385';
 
 // ─── CDN Pull Zone hostname for direct HLS streaming ─────────────────────────
 export const BUNNY_CDN_HOSTNAME =
-  process.env.EXPO_PUBLIC_BUNNY_CDN_HOSTNAME || 'vz-00cfb11c-b5a.b-cdn.net';
+  process.env.EXPO_PUBLIC_BUNNY_CDN_HOSTNAME || 'vz-bdb1ac25-513.b-cdn.net';
 
 /**
  * Direct HLS playlist URL — plays natively on iOS (AVPlayer) & Android (ExoPlayer).

@@ -5,7 +5,7 @@ import fs from 'fs';
 // 🐇 Bunny.net Stream Configuration
 // ══════════════════════════════════════════════════════════════════════════════
 // Dynamic getters so env vars are always fresh (handles late dotenv loading)
-const getLibraryId = () => (process.env.BUNNY_STREAM_LIBRARY_ID || '722568').trim();
+const getLibraryId = () => (process.env.BUNNY_STREAM_LIBRARY_ID || '736385').trim();
 const getApiKey = () => (process.env.BUNNY_STREAM_API_KEY || '').trim();
 const getBaseUrl = () => `https://video.bunnycdn.com/library/${getLibraryId()}/videos`;
 const getCollectionsUrl = () => `https://video.bunnycdn.com/library/${getLibraryId()}/collections`;

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Campusify API Collection",
-    "description": "Complete A-Z API Blueprint — Updated Aug 2026. All routes: Auth, Admin, Curriculum, Content, User, Payment, Health.",
+    "description": "Complete A-Z API Blueprint — Updated Aug 2026. All routes: Auth, Admin (incl. Bunny Collection management), Curriculum, Content, User, Payment, Health. Bunny Library: 736385.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -588,6 +588,66 @@
           }
         },
         {
+          "name": "20b. Create Bunny Collection for Subject",
+          "description": "Creates a folder on Bunny.net for the given subject and saves the collectionId to MongoDB. If collection already exists, returns existing one. collectionName is optional — defaults to subject's name.",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"collectionName\": \"Mathematics\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/subject/<subjectId>/create-collection",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "subject",
+                "<subjectId>",
+                "create-collection"
+              ]
+            }
+          }
+        },
+        {
+          "name": "20c. Link Existing Bunny Collection to Subject",
+          "description": "Manually link a Bunny Collection ID to a subject. Use this if you created the collection directly on Bunny.net dashboard.",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bunnyCollectionId\": \"<guid-from-bunny-dashboard>\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/subject/<subjectId>/link-collection",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "subject",
+                "<subjectId>",
+                "link-collection"
+              ]
+            }
+          }
+        },
+        {
           "name": "21. Upload Video/PDF (Bunny CDN)",
           "description": "Uploads file to Bunny CDN then saves to DB. If upload fails at any step, orphaned Bunny video is auto-deleted. No DB entry on failure.",
           "request": {
@@ -655,7 +715,7 @@
         },
         {
           "name": "22. Add Content (Link Existing Bunny Video)",
-          "description": "Link an already-uploaded Bunny video by its GUID. fileKey is auto-sanitized (strips library prefix).",
+          "description": "Link an already-uploaded Bunny video by its GUID. fileKey is auto-sanitized (strips library prefix). bunnyLibraryId=736385 for Campusify library.",
           "request": {
             "method": "POST",
             "header": [
@@ -666,7 +726,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"subjectId\": \"<ID>\",\n  \"title\": \"Lecture 2: HLS Stream\",\n  \"type\": \"video\",\n  \"orderSequence\": 2,\n  \"unit\": \"Unit 1\",\n  \"category\": \"Resources\",\n  \"fileKey\": \"c3e819d3-1501-4160-94bc-a9791d2244c1\",\n  \"bunnyLibraryId\": \"722568\",\n  \"bunnyCollectionId\": \"<Collection_ID>\",\n  \"isFree\": false\n}"
+              "raw": "{\n  \"subjectId\": \"<ID>\",\n  \"title\": \"Lecture 2: HLS Stream\",\n  \"type\": \"video\",\n  \"orderSequence\": 2,\n  \"unit\": \"Unit 1\",\n  \"category\": \"Resources\",\n  \"fileKey\": \"c3e819d3-1501-4160-94bc-a9791d2244c1\",\n  \"bunnyLibraryId\": \"736385\",\n  \"bunnyCollectionId\": \"<Collection_ID>\",\n  \"isFree\": false\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/admin/content/add",
