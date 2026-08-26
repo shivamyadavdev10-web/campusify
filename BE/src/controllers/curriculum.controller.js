@@ -20,15 +20,49 @@ export const getBranches = catchAsync(async (req, res) => {
 // 📅 Step 2: Branch select hone par Semesters dikhana
 export const getSemesters = catchAsync(async (req, res) => {
     const { branchId } = req.params;
+    
+    // Fetch branch details for detailsUrl
+    const branch = await Branch.findById(branchId).select('name shortName detailsUrl');
+    
     const semesters = await Semester.find({ branchId, isPublished: true }).sort({ semNumber: 1 });
-    res.status(200).json({ status: true, semesters });
+    
+    res.status(200).json({ 
+        status: true, 
+        semesters,
+        branch: branch ? { 
+            name: branch.name, 
+            shortName: branch.shortName,
+            detailsUrl: branch.detailsUrl || 'https://campusifyplus.in/online-classes/' 
+        } : null
+    });
 });
 
 // 📚 Step 3: Semester select hone par uske Subjects dikhana
 export const getSubjects = catchAsync(async (req, res) => {
     const { semesterId } = req.params;
+    
+    // Fetch semester with branch info for detailsUrl
+    const semester = await Semester.findById(semesterId)
+        .populate({ path: 'branchId', select: 'name shortName detailsUrl' });
+    
     const subjects = await Subject.find({ semesterId, isActive: true }).sort({ orderSequence: 1 });
-    res.status(200).json({ status: true, subjects });
+    
+    // Determine the best detailsUrl: semester-level override > branch-level > default
+    const detailsUrl = semester?.detailsUrl 
+        || semester?.branchId?.detailsUrl 
+        || 'https://campusifyplus.in/online-classes/';
+    
+    res.status(200).json({ 
+        status: true, 
+        subjects,
+        detailsUrl,
+        semester: semester ? {
+            title: semester.title,
+            semNumber: semester.semNumber,
+            branchName: semester.branchId?.name,
+            branchShortName: semester.branchId?.shortName
+        } : null
+    });
 });
 
 // 🚀 Step 4: Subject click hone par Videos & Notes dikhana (SMART LOCK LOGIC)
@@ -92,6 +126,50 @@ export const getContents = catchAsync(async (req, res) => {
         status: true, 
         isSemesterPurchased: hasPurchased, 
         contents: processedContent 
+    });
+});
+
+// 🏠 Featured Search Results — Default categories for search screen
+export const getDefaultSearchResults = catchAsync(async (req, res) => {
+    // Fetch semesters with semNumber 3 and 5 (all branches)
+    const featuredSemesters = await Semester.find({ 
+        isPublished: true,
+        semNumber: { $in: [3, 5] }
+    })
+    .populate({
+        path: 'branchId',
+        select: 'name shortName detailsUrl'
+    })
+    .sort({ semNumber: -1, createdAt: -1 }); // 5th sem first, then 3rd
+
+    // Group by semester number
+    const grouped = {};
+    featuredSemesters.forEach(sem => {
+        const key = `sem_${sem.semNumber}`;
+        if (!grouped[key]) {
+            grouped[key] = {
+                semNumber: sem.semNumber,
+                title: sem.semNumber === 5 ? '5th Semester Courses' : '3rd Semester Courses',
+                courses: []
+            };
+        }
+        grouped[key].courses.push({
+            _id: sem._id,
+            title: sem.title,
+            semNumber: sem.semNumber,
+            price: sem.price,
+            branchName: sem.branchId?.name || 'Unknown',
+            branchShortName: sem.branchId?.shortName || '',
+            detailsUrl: sem.detailsUrl || sem.branchId?.detailsUrl || 'https://campusifyplus.in/online-classes/'
+        });
+    });
+
+    // Convert to ordered array (5th first, then 3rd)
+    const categories = Object.values(grouped).sort((a, b) => b.semNumber - a.semNumber);
+
+    res.status(200).json({ 
+        status: true, 
+        categories 
     });
 });
 

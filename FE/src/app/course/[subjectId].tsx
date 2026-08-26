@@ -9,6 +9,7 @@ import { ErrorState } from '@/src/components/ui/ErrorState';
 import { EmptyState } from '@/src/components/ui/EmptyState';
 import UnitSection from '@/src/features/curriculum/components/UnitSection';
 import VideoPlayer from '@/src/features/video/components/VideoPlayer';
+import DetailsBottomBar from '@/src/components/ui/DetailsBottomBar';
 import { Lock, BookOpen, X, ShieldCheck } from 'lucide-react-native';
 import { Content } from '@/src/types/curriculum.types';
 
@@ -42,7 +43,7 @@ class VideoErrorBoundary extends Component<{ children: ReactNode; onError: () =>
 }
 
 export default function CourseContentScreen() {
-  const { subjectId } = useLocalSearchParams<{ subjectId: string }>();
+  const { subjectId, detailsUrl } = useLocalSearchParams<{ subjectId: string; detailsUrl?: string }>();
   const { showToast } = useUIStore();
   const navigation = useNavigation();
 
@@ -132,7 +133,7 @@ export default function CourseContentScreen() {
         <TouchableOpacity
           activeOpacity={0.85}
           style={styles.purchaseBanner}
-          onPress={() => showToast('Contact us to purchase: +91 8104131420', 'info')}
+          onPress={() => showToast('Contact us to purchase: +91 7977675291', 'info')}
         >
           <View style={styles.purchaseIconWrap}>
             <ShieldCheck color="#4f46e5" size={18} />
@@ -166,6 +167,9 @@ export default function CourseContentScreen() {
           />
         )}
       />
+
+      {/* Sticky Bottom CTA — Get More Details + WhatsApp */}
+      <DetailsBottomBar detailsUrl={detailsUrl || 'https://campusifyplus.in/online-classes/'} />
 
       {/* Full-screen video modal */}
       <Modal
@@ -238,7 +242,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: 80,
     gap: 12,
   },
   modalBg: {

@@ -1,7 +1,8 @@
 import express from "express";
 import {
     getBranches, getSemesters, getSubjects, getContents, searchCurriculum,
-    getTrendingCourses, getFreeContents, getSingleContentUrl, getFreeStreamUrl, getBanner
+    getTrendingCourses, getFreeContents, getSingleContentUrl, getFreeStreamUrl, getBanner,
+    getDefaultSearchResults
 } from "../controllers/curriculum.controller.js";
 import { getStreamUrl } from "../controllers/bunny.controller.js";
 import { isLoggedIn } from "../middleware/isLoggedIn.middleware.js";
@@ -30,6 +31,7 @@ router.get("/free-stream-url/:contentId", isLoggedIn, getFreeStreamUrl);
 // 🔒 PAID ROUTE: Check enrollment before generating stream URL
 router.get("/stream-url/:contentId", isLoggedIn, checkEnrollment, getStreamUrl);
 
+router.get("/search/featured", isLoggedIn, getDefaultSearchResults);
 router.get("/search", isLoggedIn, searchCurriculum);
 
 // 🟡 PROTECTED ROUTES: Semesters aur Subjects dekhne ke liye Free Account (Login) zaruri hai

@@ -20,6 +20,11 @@ const branchSchema = new mongoose.Schema(
     icon: { 
       type: String // Frontend par branch ka logo dikhane ke liye URL
     },
+    detailsUrl: { 
+      type: String, 
+      trim: true,
+      default: 'https://campusifyplus.in/online-classes/' // Fallback URL
+    },
     isActive: { 
       type: Boolean, 
       default: true 

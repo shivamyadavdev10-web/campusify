@@ -21,6 +21,10 @@ const semesterSchema = new mongoose.Schema(
       required: true 
     },
     thumbnail: { type: String },
+    detailsUrl: { 
+      type: String, 
+      trim: true // Optional semester-level override. Falls back to branch URL if empty.
+    },
     isPublished: { 
       type: Boolean, 
       default: false // Admin jab ready ho tab true kare

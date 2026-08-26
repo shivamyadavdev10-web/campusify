@@ -1,7 +1,7 @@
 import express from "express";
 import { 
     getDashboardStats, manualAccessOverride, bulkStudentUpload,
-    createBranch, createSemester, createSubject, uploadCourseContent, semesterPublish,
+    createBranch, createSemester, createSubject, uploadCourseContent, semesterPublish, getAllSemesters,
     unlockDevice, toggleBanUser, getSuspiciousActivity, checkUserPassword, reorderSubjects,
     toggleContentFreeStatus, uploadBanner, toggleBanner, deleteBanner, updateUserPassword,
     createContent, createSubjectCollection, linkCollectionToSubject
@@ -43,6 +43,7 @@ router.post("/branch", createBranch);
 router.post("/semester", createSemester);
 router.post("/subject", createSubject);
 router.patch("/subject/reorder", reorderSubjects);
+router.get("/semesters/:branchId", getAllSemesters);
 router.patch("/semester/:semesterId/toggle-publish", semesterPublish);
 // 🗂️ Bunny Collection per Subject
 router.post("/subject/:subjectId/create-collection", createSubjectCollection);

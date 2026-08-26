@@ -239,6 +239,13 @@ export const createSemester = catchAsync(async (req, res) => {
     res.status(201).json({ status: true, message: "Semester created", semester });
 });
 
+// 📋 Admin: Get ALL semesters for a branch (published + drafts)
+export const getAllSemesters = catchAsync(async (req, res) => {
+    const { branchId } = req.params;
+    const semesters = await Semester.find({ branchId }).sort({ semNumber: 1 });
+    res.status(200).json({ status: true, semesters });
+});
+
 export const createSubject = catchAsync(async (req, res) => {
     const subject = await Subject.create(req.body);
     res.status(201).json({ status: true, message: "Subject created", subject });

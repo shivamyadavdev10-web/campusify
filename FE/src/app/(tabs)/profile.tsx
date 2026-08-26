@@ -110,12 +110,12 @@ export default function ProfileScreen() {
             </View>
             <View className="flex-1">
               <Text className="text-[15px] font-medium text-on-surface">Contact Support</Text>
-              <Text className="text-[13px] text-on-surface-variant mt-0.5">Call: +91 8104131420</Text>
+              <Text className="text-[13px] text-on-surface-variant mt-0.5">Call: +91 7977675291</Text>
             </View>
             {/* WhatsApp DM button */}
             <TouchableOpacity 
               className="bg-[#25D366] w-9 h-9 rounded-full items-center justify-center"
-              onPress={() => Linking.openURL('https://wa.me/918104131420')}
+              onPress={() => Linking.openURL('https://wa.me/917977675291')}
             >
               <MessageCircle color="#ffffff" size={16} />
             </TouchableOpacity>
@@ -138,7 +138,7 @@ export default function ProfileScreen() {
           {/* Report Bugs — WhatsApp redirect */}
           <TouchableOpacity 
             className="flex-row items-center p-3 border-b border-surface-container-highest active:bg-surface-container-lowest rounded-xl"
-            onPress={() => Linking.openURL('https://wa.me/918104131420?text=Bug%20Report%3A%20')}
+            onPress={() => Linking.openURL('https://wa.me/917977675291?text=Bug%20Report%3A%20')}
           >
             <View className="w-10 h-10 rounded-full bg-[#fef3c7] flex items-center justify-center mr-4">
               <Bug color="#d97706" size={20} />
