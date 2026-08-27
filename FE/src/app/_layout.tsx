@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { Stack, useRouter, useSegments, SplashScreen } from 'expo-router';
 import { Audio } from 'expo-av';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { queryClient } from '@/src/core/api/queryClient';
+import { queryClient, asyncStoragePersister, CACHE_MAX_AGE } from '@/src/core/api/queryClient';
 import { useAuthStore } from '@/src/core/stores/auth.store';
 import { View, Text, ActivityIndicator, BackHandler, Alert, Platform } from 'react-native';
 import ToastRenderer from '@/src/components/ui/ToastRenderer';
@@ -94,7 +94,14 @@ function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{
+          persister: asyncStoragePersister,
+          maxAge: CACHE_MAX_AGE,        // discard cache entries older than 24h
+          buster: 'v1',                 // bump this string to force cache reset on app update
+        }}
+      >
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#f8f9ff' } }}>
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -161,7 +168,7 @@ function RootLayout() {
             <Text style={{ color: 'white', fontWeight: 'bold' }}>⚠️ No Internet Connection</Text>
           </View>
         )}
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </SafeAreaProvider>
   );
 }

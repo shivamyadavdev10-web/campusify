@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useRef, Component, ErrorInfo, 
 import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Platform, Modal, ActivityIndicator, Linking, Dimensions } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/src/core/api/client';
+import { STALE_TIMES } from '@/src/core/api/queryClient';
 import { Skeleton } from '@/src/components/ui/Skeleton';
 import { ErrorState } from '@/src/components/ui/ErrorState';
 import { useRouter } from 'expo-router';
@@ -44,28 +45,32 @@ export default function HomeScreen() {
 
   const { showToast } = useUIStore();
 
-  // Fetch branches
+  // Fetch branches — cached 24h (rarely changes)
   const { data: branchesData, isLoading: branchesLoading, isError: branchesError, error: branchesQueryError, refetch: refetchBranches } = useQuery({
     queryKey: ['branches'],
-    queryFn: () => apiClient.get('/curriculum/branches').then(res => res.data)
+    queryFn: () => apiClient.get('/curriculum/branches').then(res => res.data),
+    staleTime: STALE_TIMES.branches,
   });
 
-  // Fetch trending courses
+  // Fetch trending courses — cached 30m
   const { data: trendingData, isLoading: trendingLoading, refetch: refetchTrending } = useQuery({
     queryKey: ['trending-courses'],
-    queryFn: () => apiClient.get('/curriculum/courses/trending').then(res => res.data)
+    queryFn: () => apiClient.get('/curriculum/courses/trending').then(res => res.data),
+    staleTime: STALE_TIMES.trending,
   });
 
-  // Fetch demo (free) lectures
+  // Fetch demo (free) lectures — cached 30m
   const { data: freeData, isLoading: freeLoading, refetch: refetchFree } = useQuery({
     queryKey: ['free-contents'],
-    queryFn: () => apiClient.get('/curriculum/contents/free').then(res => res.data)
+    queryFn: () => apiClient.get('/curriculum/contents/free').then(res => res.data),
+    staleTime: STALE_TIMES['free-contents'],
   });
 
-  // Fetch dynamic banner
+  // Fetch dynamic banner — cached 1h
   const { data: bannerData, refetch: refetchBanner } = useQuery({
     queryKey: ['home-banner'],
-    queryFn: () => apiClient.get('/curriculum/banner').then(res => res.data)
+    queryFn: () => apiClient.get('/curriculum/banner').then(res => res.data),
+    staleTime: STALE_TIMES['home-banner'],
   });
 
   const [refreshing, setRefreshing] = useState(false);

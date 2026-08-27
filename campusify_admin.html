@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campusify | Admin Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { primary: '#4f46e5', secondary: '#0f172a' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .hide { display: none !important; }
+        .toast-enter { animation: slideIn 0.3s ease-out forwards; }
+        .toast-exit { animation: fadeOut 0.3s ease-in forwards; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .form-input {
+            width: 100%; padding: 0.5rem 0.75rem; border-radius: 0.375rem;
+            border: 1px solid #d1d5db; outline: none; transition: border-color 0.2s; font-size: 0.875rem;
+        }
+        .form-input:focus { border-color: #4f46e5; box-shadow: 0 0 0 1px #4f46e5; }
+        .form-input:disabled { background-color: #f1f5f9; cursor: not-allowed; }
+        .btn-primary {
+            background-color: #4f46e5; color: white; padding: 0.5rem 1rem; border-radius: 0.375rem;
+            font-weight: 500; transition: background-color 0.2s; cursor: pointer; font-size: 0.875rem;
+        }
+        .btn-primary:hover:not(:disabled) { background-color: #4338ca; }
+        .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
+        .info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 0.5rem; padding: 0.75rem 1rem; font-size: 0.8rem; color: #1e40af; }
+        .collection-badge-ok { display: inline-flex; align-items: center; gap: 4px; background: #dcfce7; color: #15803d; font-size: 0.65rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+        .collection-badge-missing { display: inline-flex; align-items: center; gap: 4px; background: #fee2e2; color: #dc2626; font-size: 0.65rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+        .subject-info-card { border: 1px solid #c7d2fe; background: #eef2ff; border-radius: 0.5rem; padding: 0.6rem 0.85rem; font-size: 0.8rem; }
+    </style>
+</head>
+<body class="text-slate-800 antialiased h-screen flex overflow-hidden">
+
+<div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-3"></div>
+
+<!-- ════════════════════════════════════════════ LOGIN ════════════════ -->
+<div id="login-screen" class="fixed inset-0 bg-slate-900 z-40 flex items-center justify-center">
+    <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 text-primary mb-4">
+                <i class="fa-solid fa-graduation-cap text-3xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-slate-900">Campusify Admin</h1>
+            <p class="text-slate-500 text-sm mt-2">Sign in to access the control panel</p>
+        </div>
+        <form id="login-form" class="space-y-4" onsubmit="handleLogin(event)">
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                <input type="email" id="login-email" class="form-input" required placeholder="admin@email" value=""></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                <input type="password" id="login-password" class="form-input" required placeholder="••••••••" value=""></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1">Device ID</label>
+                <input type="text" id="login-device-id" class="form-input" required value=""></div>
+            <button type="submit" id="login-btn" class="btn-primary w-full flex justify-center items-center gap-2 mt-6">
+                <span>Sign In</span><i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════ APP ════════════════ -->
+<div id="app-container" class="flex w-full h-full hide">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-secondary text-white flex flex-col flex-shrink-0">
+        <div class="h-16 flex items-center px-6 border-b border-slate-700">
+            <i class="fa-solid fa-graduation-cap text-indigo-400 text-xl mr-3"></i>
+            <span class="text-lg font-bold tracking-wide">Campusify</span>
+        </div>
+        <nav class="flex-1 overflow-y-auto py-4">
+            <ul class="space-y-1">
+                <li><a href="#" onclick="switchView('dashboard')" class="nav-link block px-6 py-3 hover:bg-slate-800 transition-colors bg-slate-800 border-r-4 border-indigo-500" data-view="dashboard"><i class="fa-solid fa-chart-pie w-6"></i> Dashboard</a></li>
+                <li><a href="#" onclick="switchView('saved-data')" class="nav-link block px-6 py-3 hover:bg-slate-800 transition-colors" data-view="saved-data"><i class="fa-solid fa-database w-6"></i> Saved Data</a></li>
+                <li class="px-6 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-4">Management</li>
+                <li><a href="#" onclick="switchView('curriculum')" class="nav-link block px-6 py-3 hover:bg-slate-800 transition-colors" data-view="curriculum"><i class="fa-solid fa-book w-6"></i> Curriculum</a></li>
+                <li><a href="#" onclick="switchView('content')" class="nav-link block px-6 py-3 hover:bg-slate-800 transition-colors" data-view="content"><i class="fa-solid fa-video w-6"></i> Content Uploads</a></li>
+                <li><a href="#" onclick="switchView('banners')" class="nav-link block px-6 py-3 hover:bg-slate-800 transition-colors" data-view="banners"><i class="fa-solid fa-images w-6"></i> Banners</a></li>
+                <li class="px-6 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mt-4">Security &amp; Users</li>
+                <li><a href="#" onclick="switchView('users')" class="nav-link block px-6 py-3 hover:bg-slate-800 transition-colors" data-view="users"><i class="fa-solid fa-users-shield w-6"></i> User Control</a></li>
+            </ul>
+        </nav>
+        <div class="p-4 border-t border-slate-700">
+            <button onclick="handleLogout()" class="w-full flex items-center gap-2 px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition-colors">
+                <i class="fa-solid fa-sign-out-alt"></i> Logout
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden">
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shadow-sm z-10 flex-shrink-0">
+            <h2 id="page-title" class="text-xl font-semibold text-slate-800">Dashboard</h2>
+            <div class="flex items-center gap-4">
+                <span class="text-xs text-slate-400 hidden sm:block">Library: <code class="bg-slate-100 px-1 rounded">736385</code></span>
+                <div class="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-primary font-bold border border-indigo-200">A</div>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-auto p-8" id="views-container">
+
+            <!-- ══════════ DASHBOARD ══════════ -->
+            <div id="view-dashboard" class="view-section">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
+                        <div class="p-3 bg-blue-50 text-blue-600 rounded-lg"><i class="fa-solid fa-users text-2xl"></i></div>
+                        <div><p class="text-sm text-slate-500">Total Students</p><h3 class="text-2xl font-bold" id="stat-students">--</h3></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
+                        <div class="p-3 bg-purple-50 text-purple-600 rounded-lg"><i class="fa-solid fa-layer-group text-2xl"></i></div>
+                        <div><p class="text-sm text-slate-500">Semesters</p><h3 class="text-2xl font-bold" id="stat-semesters">--</h3></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
+                        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-lg"><i class="fa-solid fa-video text-2xl"></i></div>
+                        <div><p class="text-sm text-slate-500">Total Content</p><h3 class="text-2xl font-bold" id="stat-content">--</h3></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
+                        <div class="p-3 bg-red-50 text-red-600 rounded-lg"><i class="fa-solid fa-bolt text-2xl"></i></div>
+                        <div><p class="text-sm text-slate-500">Active 24h</p><h3 class="text-2xl font-bold" id="stat-active">--</h3></div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                        <h3 class="text-lg font-semibold mb-4">A → Z Workflow Guide</h3>
+                        <ol class="space-y-3 text-sm text-slate-700">
+                            <li class="flex gap-3"><span class="w-6 h-6 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">1</span><span><strong>Create Branch</strong> → Go to Curriculum tab</span></li>
+                            <li class="flex gap-3"><span class="w-6 h-6 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">2</span><span><strong>Create Semester</strong> → Paste Branch ID from result card</span></li>
+                            <li class="flex gap-3"><span class="w-6 h-6 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">3</span><span><strong>Create Subject</strong> → e.g. Mathematics, Hindi, English</span></li>
+                            <li class="flex gap-3"><span class="w-6 h-6 bg-orange-100 text-orange-700 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">4</span><span><strong>Create Bunny Folder</strong> → In Saved Data → click <i class="fa-solid fa-folder-plus text-orange-500"></i> on any subject</span></li>
+                            <li class="flex gap-3"><span class="w-6 h-6 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">5</span><span><strong>Upload Video</strong> → Content Uploads → Collection auto-fills!</span></li>
+                        </ol>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                        <h3 class="text-lg font-semibold mb-4">Quick Actions</h3>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="switchView('curriculum')" class="p-4 bg-indigo-50 text-indigo-700 rounded-lg font-medium hover:bg-indigo-100 transition-colors text-sm text-left"><i class="fa-solid fa-plus mb-1 block text-xl"></i>Add Course</button>
+                            <button onclick="switchView('saved-data')" class="p-4 bg-emerald-50 text-emerald-700 rounded-lg font-medium hover:bg-emerald-100 transition-colors text-sm text-left"><i class="fa-solid fa-database mb-1 block text-xl"></i>View IDs</button>
+                            <button onclick="switchView('content')" class="p-4 bg-purple-50 text-purple-700 rounded-lg font-medium hover:bg-purple-100 transition-colors text-sm text-left"><i class="fa-solid fa-upload mb-1 block text-xl"></i>Upload Content</button>
+                            <button onclick="switchView('users')" class="p-4 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors text-sm text-left"><i class="fa-solid fa-users-shield mb-1 block text-xl"></i>Users</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════ SAVED DATA ══════════ -->
+            <div id="view-saved-data" class="view-section hide">
+                <div class="mb-4 info-box flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info text-blue-500"></i>
+                    <span><strong>Click any card</strong> to drill down. <strong>Copy IDs</strong> for forms. <strong>Orange button <i class="fa-solid fa-folder-plus text-orange-500"></i></strong> creates a Bunny folder for that subject.</span>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 flex flex-col" style="height:75vh">
+                        <div class="p-4 border-b border-slate-100 bg-slate-50 rounded-t-xl flex justify-between items-center">
+                            <h3 class="font-semibold text-slate-800"><i class="fa-solid fa-code-branch text-indigo-500 mr-2"></i>Branches</h3>
+                            <button onclick="fetchSavedBranches()" class="text-xs bg-white border border-slate-200 px-2 py-1 rounded hover:bg-slate-100 shadow-sm"><i class="fa-solid fa-rotate"></i></button>
+                        </div>
+                        <div class="p-3 flex-1 overflow-y-auto space-y-2" id="saved-branches-list"><p class="text-sm text-slate-400 text-center py-8">Loading...</p></div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 flex flex-col" style="height:75vh">
+                        <div class="p-4 border-b border-slate-100 bg-slate-50 rounded-t-xl">
+                            <h3 class="font-semibold text-slate-800"><i class="fa-solid fa-calendar-alt text-purple-500 mr-2"></i>Semesters</h3>
+                        </div>
+                        <div class="p-3 flex-1 overflow-y-auto space-y-2" id="saved-semesters-list"><p class="text-sm text-slate-400 text-center py-8">Select a branch</p></div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 flex flex-col" style="height:75vh">
+                        <div class="p-4 border-b border-slate-100 bg-slate-50 rounded-t-xl">
+                            <h3 class="font-semibold text-slate-800"><i class="fa-solid fa-book-open text-emerald-500 mr-2"></i>Subjects + Bunny</h3>
+                        </div>
+                        <div class="p-3 flex-1 overflow-y-auto space-y-2" id="saved-subjects-list"><p class="text-sm text-slate-400 text-center py-8">Select a semester</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════ CURRICULUM ══════════ -->
+            <div id="view-curriculum" class="view-section hide">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Branch -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                        <h3 class="text-lg font-semibold mb-1 border-b pb-2">1. Create Branch</h3>
+                        <p class="text-xs text-slate-500 mb-4">e.g., Computer Engineering, Mechanical</p>
+                        <form onsubmit="handleCreateBranch(event)" class="space-y-4">
+                            <div><label class="block text-sm font-medium mb-1">Branch Name</label><input type="text" id="branch-name" class="form-input" required placeholder="Computer Engineering"></div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="block text-sm font-medium mb-1">Short Name</label><input type="text" id="branch-short" class="form-input" required placeholder="CO"></div>
+                                <div><label class="block text-sm font-medium mb-1">Description</label><input type="text" id="branch-desc" class="form-input" placeholder="Optional"></div>
+                            </div>
+                            <div><label class="block text-sm font-medium mb-1">Details URL <span class="text-xs text-slate-400">(optional — for "Get More Details" button)</span></label>
+                                <input type="url" id="branch-details-url" class="form-input" placeholder="https://campusifyplus.in/online-classes/">
+                                <p class="text-xs text-slate-400 mt-1">Defaults to campusifyplus.in/online-classes/ if empty</p>
+                            </div>
+                            <button type="submit" id="btn-create-branch" class="btn-primary w-full">Create Branch</button>
+                        </form>
+                        <div id="branch-result" class="hide mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm">
+                            <p class="font-semibold text-emerald-700">✅ Branch Created!</p>
+                            <p class="text-slate-600 text-xs mt-1">Branch ID: <code id="branch-result-id" class="bg-white px-1 rounded select-all font-mono"></code>
+                            <button onclick="copyToClipboard(document.getElementById('branch-result-id').innerText)" class="ml-2 text-indigo-600 hover:underline text-xs"><i class="fa-regular fa-copy"></i> Copy</button></p>
+                        </div>
+                    </div>
+                    <!-- Semester -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                        <h3 class="text-lg font-semibold mb-1 border-b pb-2">2. Create Semester</h3>
+                        <p class="text-xs text-slate-500 mb-4">Paste Branch ID from step 1</p>
+                        <form onsubmit="handleCreateSemester(event)" class="space-y-4">
+                            <div><label class="block text-sm font-medium mb-1">Branch ID</label>
+                                <div class="flex gap-2"><input type="text" id="sem-branch-id" class="form-input" required placeholder="Paste Branch ID">
+                                <button type="button" onclick="pasteFrom('branch-result-id','sem-branch-id')" class="btn-primary px-3 text-xs whitespace-nowrap">Paste ↑</button></div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="block text-sm font-medium mb-1">Title</label><input type="text" id="sem-title" class="form-input" required placeholder="Semester 1"></div>
+                                <div><label class="block text-sm font-medium mb-1">Price (₹)</label><input type="number" id="sem-price" class="form-input" required placeholder="499"></div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="block text-sm font-medium mb-1">Sem Number</label><input type="number" id="sem-number" class="form-input" required placeholder="1"></div>
+                                <div><label class="block text-sm font-medium mb-1">Description</label><input type="text" id="sem-desc" class="form-input" placeholder="Description"></div>
+                            </div>
+                            <div><label class="block text-sm font-medium mb-1">Details URL <span class="text-xs text-slate-400">(optional — overrides branch URL)</span></label>
+                                <input type="url" id="sem-details-url" class="form-input" placeholder="https://campusifyplus.in/online-classes/">
+                                <p class="text-xs text-slate-400 mt-1">Leave empty to use the branch-level URL</p>
+                            </div>
+                            <button type="submit" id="btn-create-semester" class="btn-primary w-full">Create Semester</button>
+                        </form>
+                        <div id="semester-result" class="hide mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm">
+                            <p class="font-semibold text-emerald-700">✅ Semester Created!</p>
+                            <p class="text-slate-600 text-xs mt-1">Semester ID: <code id="semester-result-id" class="bg-white px-1 rounded select-all font-mono"></code>
+                            <button onclick="copyToClipboard(document.getElementById('semester-result-id').innerText)" class="ml-2 text-indigo-600 hover:underline text-xs"><i class="fa-regular fa-copy"></i> Copy</button></p>
+                        </div>
+                    </div>
+                    <!-- Subject -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 lg:col-span-2">
+                        <h3 class="text-lg font-semibold mb-1 border-b pb-2">3. Create Subject</h3>
+                        <p class="text-xs text-slate-500 mb-4">After creating → click the <i class="fa-solid fa-folder-plus text-orange-500"></i> button to create its Bunny folder too</p>
+                        <form onsubmit="handleCreateSubject(event)" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div><label class="block text-sm font-medium mb-1">Branch ID</label>
+                                    <div class="flex gap-1"><input type="text" id="sub-branch-id" class="form-input" required>
+                                    <button type="button" onclick="pasteFrom('branch-result-id','sub-branch-id')" class="btn-primary px-2 text-xs">↑</button></div>
+                                </div>
+                                <div><label class="block text-sm font-medium mb-1">Semester ID</label>
+                                    <div class="flex gap-1"><input type="text" id="sub-sem-id" class="form-input" required>
+                                    <button type="button" onclick="pasteFrom('semester-result-id','sub-sem-id')" class="btn-primary px-2 text-xs">↑</button></div>
+                                </div>
+                                <div><label class="block text-sm font-medium mb-1">Subject Name</label><input type="text" id="sub-name" class="form-input" required placeholder="Mathematics"></div>
+                                <div><label class="block text-sm font-medium mb-1">Subject Code</label><input type="text" id="sub-code" class="form-input" placeholder="MTH101"></div>
+                            </div>
+                            <div class="flex gap-4 items-end">
+                                <div class="w-32"><label class="block text-sm font-medium mb-1">Order</label><input type="number" id="sub-order" class="form-input" required value="1"></div>
+                                <button type="submit" id="btn-create-subject" class="btn-primary px-8">Create Subject</button>
+                            </div>
+                        </form>
+                        <div id="subject-result" class="hide mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm">
+                            <p class="font-semibold text-emerald-700">✅ Subject Created!</p>
+                            <div class="flex flex-wrap gap-4 items-center mt-2">
+                                <div><span class="text-xs text-slate-500">Subject ID:</span> <code id="subject-result-id" class="bg-white px-1 rounded select-all font-mono text-xs"></code>
+                                <button onclick="copyToClipboard(document.getElementById('subject-result-id').innerText)" class="ml-1 text-indigo-600 text-xs"><i class="fa-regular fa-copy"></i></button></div>
+                                <button id="btn-create-coll-inline" onclick="createCollectionForSubject(document.getElementById('subject-result-id').innerText, document.getElementById('sub-name').value, 'btn-create-coll-inline')" class="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-semibold transition-colors">
+                                    <i class="fa-solid fa-folder-plus"></i> Create Bunny Folder Now
+                                </button>
+                            </div>
+                            <div id="coll-result-inline" class="hide mt-2 text-xs text-emerald-700 font-semibold">
+                                🗂️ Bunny Folder Created! Collection ID: <code id="coll-result-inline-id" class="bg-white px-1 rounded select-all font-mono"></code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════ CONTENT UPLOADS ══════════ -->
+            <div id="view-content" class="view-section hide">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Upload File -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                        <h3 class="text-lg font-semibold mb-1 border-b pb-3"><i class="fa-solid fa-cloud-upload-alt text-emerald-500 mr-2"></i>Upload Video / PDF File</h3>
+                        <p class="text-xs text-slate-500 mb-4">Uploads directly to Bunny CDN and saves to your database.</p>
+                        <div class="info-box mb-4"><i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i> <strong>Tip:</strong> Go to Saved Data → click <strong>→ Upload</strong> on any subject to auto-fill this form.</div>
+                        <form onsubmit="handleFileUpload(event)" class="space-y-4">
+                            <div><label class="block text-sm font-medium mb-1">Subject ID</label>
+                                <div class="flex gap-2"><input type="text" id="upload-sub-id" class="form-input" required placeholder="Paste Subject ID">
+                                <button type="button" onclick="loadSubjectInfo('upload-sub-id','upload-subject-info','upload-coll-id')" class="btn-primary px-3 text-xs whitespace-nowrap">Load Info</button></div>
+                                <div id="upload-subject-info" class="hide mt-2 subject-info-card">
+                                    <p class="font-semibold text-indigo-800" id="upload-subject-name">—</p>
+                                    <div class="flex items-center gap-2 mt-1"><span class="text-slate-500 text-xs">Bunny Folder:</span><span id="upload-coll-status"></span></div>
+                                </div>
+                                <input type="hidden" id="upload-coll-id">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="block text-sm font-medium mb-1">Unit</label><input type="text" id="upload-unit" class="form-input" required placeholder="Unit 1"></div>
+                                <div><label class="block text-sm font-medium mb-1">Type</label>
+                                    <select id="upload-type" class="form-input"><option value="video">🎥 Video</option><option value="pdf">📄 PDF</option><option value="notes">📝 Notes</option></select>
+                                </div>
+                            </div>
+                            <div><label class="block text-sm font-medium mb-1">Title</label><input type="text" id="upload-title" class="form-input" required placeholder="Unit 1 - Introduction to Matrices"></div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="block text-sm font-medium mb-1">Order</label><input type="number" id="upload-order" class="form-input" value="1" min="1"></div>
+                                <div><label class="block text-sm font-medium mb-1">Category</label>
+                                    <select id="upload-category" class="form-input"><option value="Resources">Resources</option><option value="Notes">Notes</option><option value="VVIMP">VVIMP</option><option value="Question Banks">Question Banks</option></select>
+                                </div>
+                            </div>
+                            <div><label class="block text-sm font-medium mb-1">File</label>
+                                <input type="file" id="upload-file" class="form-input p-2 bg-slate-50" required>
+                                <p class="text-xs text-slate-400 mt-1">Video: MP4, MKV, MOV | PDF: up to 50MB</p>
+                            </div>
+                            <button type="submit" id="btn-file-upload" class="btn-primary w-full bg-emerald-600 hover:bg-emerald-700"><i class="fa-solid fa-cloud-upload-alt mr-2"></i>Upload to Bunny &amp; Save</button>
+                        </form>
+                    </div>
+
+                    <!-- Link Existing Bunny Video -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                        <h3 class="text-lg font-semibold mb-1 border-b pb-3"><i class="fa-solid fa-link text-indigo-500 mr-2"></i>Link Video from Bunny Dashboard</h3>
+                        <p class="text-xs text-slate-500 mb-4">If you uploaded directly on bunny.net, link it to a subject here.</p>
+                        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-xs text-amber-800 space-y-1">
+                            <p class="font-bold text-amber-900 mb-1">📍 Where to find Video GUID on Bunny.net:</p>
+                            <p>Dashboard → Stream → Campusify → Click video → copy the <em>Video ID</em> (long guid like <code class="bg-white px-1 rounded">c3e819d3-xxxx-xxxx</code>)</p>
+                            <p><strong>Library ID</strong> is pre-filled: <code class="bg-white px-1 rounded font-bold">736385</code></p>
+                        </div>
+                        <form onsubmit="handleLinkVideo(event)" class="space-y-4">
+                            <div><label class="block text-sm font-medium mb-1">Subject ID</label>
+                                <div class="flex gap-2"><input type="text" id="link-sub-id" class="form-input" required placeholder="Paste Subject ID">
+                                <button type="button" onclick="loadSubjectInfo('link-sub-id','link-subject-info','link-coll-id')" class="btn-primary px-3 text-xs whitespace-nowrap">Load Info</button></div>
+                                <div id="link-subject-info" class="hide mt-2 subject-info-card">
+                                    <p class="font-semibold text-indigo-800" id="link-subject-name">—</p>
+                                    <div class="flex items-center gap-2 mt-1"><span class="text-slate-500 text-xs">Bunny Folder:</span><span id="link-coll-status"></span></div>
+                                </div>
+                                <input type="hidden" id="link-coll-id">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="block text-sm font-medium mb-1">Title</label><input type="text" id="link-title" class="form-input" required placeholder="Lecture 1: Intro"></div>
+                                <div><label class="block text-sm font-medium mb-1">Unit</label><input type="text" id="link-unit" class="form-input" required placeholder="Unit 1"></div>
+                            </div>
+                            <div><label class="block text-sm font-medium mb-1">Video GUID <span class="text-xs text-slate-400">(from Bunny dashboard)</span></label>
+                                <input type="text" id="link-filekey" class="form-input font-mono" required placeholder="c3e819d3-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></div>
+                            <div><label class="block text-sm font-medium mb-1">Bunny Library ID</label>
+                                <input type="text" id="link-lib-id" class="form-input bg-slate-50 font-mono" value="736385" readonly>
+                                <p class="text-xs text-slate-400 mt-1">Pre-filled — your Campusify library</p></div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><label class="block text-sm font-medium mb-1">Order</label><input type="number" id="link-order" class="form-input" value="1" min="1"></div>
+                                <div><label class="block text-sm font-medium mb-1">Category</label>
+                                    <select id="link-category" class="form-input"><option value="Resources">Resources</option><option value="Notes">Notes</option><option value="VVIMP">VVIMP</option></select>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2"><input type="checkbox" id="link-isfree" class="w-4 h-4 accent-indigo-600">
+                                <label for="link-isfree" class="text-sm">Mark as Free Demo</label></div>
+                            <button type="submit" id="btn-link-video" class="btn-primary w-full"><i class="fa-solid fa-link mr-2"></i>Link Video to Subject</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════ USERS ══════════ -->
+            <div id="view-users" class="view-section hide">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                        <h3 class="text-lg font-semibold mb-4 text-red-600 border-b pb-2"><i class="fa-solid fa-shield-halved mr-2"></i>Security Actions</h3>
+                        <div class="space-y-6">
+                            <div><h4 class="text-sm font-medium text-slate-700 mb-1">Toggle Ban / Unban</h4>
+                                <p class="text-xs text-slate-400 mb-2">Already banned → unbans. Active → bans for N days.</p>
+                                <div class="flex gap-2 flex-wrap"><input type="email" id="ban-email" class="form-input flex-1 min-w-0" placeholder="User Email">
+                                <input type="number" id="ban-days" class="form-input w-20" placeholder="Days" min="1">
+                                <button id="btn-ban" onclick="toggleBan()" class="btn-primary bg-red-600 hover:bg-red-700 px-4">Apply</button></div>
+                            </div>
+                            <div><h4 class="text-sm font-medium text-slate-700 mb-1">Unlock Device</h4>
+                                <p class="text-xs text-slate-400 mb-2">Lets user login on a new device.</p>
+                                <div class="flex gap-2"><input type="email" id="unlock-email" class="form-input flex-1" placeholder="User Email">
+                                <button id="btn-unlock" onclick="unlockDevice()" class="btn-primary px-4">Unlock</button></div>
+                            </div>
+                            <div><h4 class="text-sm font-medium text-slate-700 mb-1">Change User Password</h4>
+                                <p class="text-xs text-slate-400 mb-2">Directly change any user's password.</p>
+                                <div class="space-y-2">
+                                    <input type="text" id="pwd-user-id" class="form-input" placeholder="User ID (MongoDB _id)">
+                                    <div class="flex gap-2"><input type="text" id="pwd-new" class="form-input flex-1" placeholder="New Password">
+                                    <button id="btn-pwd" onclick="changePassword()" class="btn-primary px-4">Change</button></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+                        <h3 class="text-lg font-semibold mb-4 border-b pb-2">Access Management</h3>
+                        <form onsubmit="handleManualAccess(event)" class="space-y-4">
+                            <div><label class="block text-sm font-medium mb-1">User Email</label><input type="email" id="access-email" class="form-input" required placeholder="student@college.edu"></div>
+                            <div><label class="block text-sm font-medium mb-1">Semester ID <span class="text-xs text-slate-400">(from Saved Data)</span></label><input type="text" id="access-sem-id" class="form-input" required></div>
+                            <div><label class="block text-sm font-medium mb-1">Action</label>
+                                <select id="access-action" class="form-input"><option value="grant">✅ Grant Access</option><option value="revoke">❌ Revoke Access</option></select></div>
+                            <button type="submit" id="btn-access" class="btn-primary w-full">Execute</button>
+                        </form>
+                        <hr class="my-5">
+                        <h4 class="text-sm font-medium text-slate-700 mb-1">Bulk Upload Students (CSV)</h4>
+                        <p class="text-xs text-slate-400 mb-3">Columns: email, firstName, lastName, password</p>
+                        <div class="flex gap-2"><input type="file" id="bulk-csv" class="form-input flex-1 p-1.5" accept=".csv">
+                        <button id="btn-bulk" onclick="handleBulkUpload()" class="btn-primary bg-emerald-600 hover:bg-emerald-700 px-4">Upload</button></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════ BANNERS ══════════ -->
+            <div id="view-banners" class="view-section hide">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 max-w-2xl">
+                    <h3 class="text-lg font-semibold mb-1 border-b pb-2">Upload Banner</h3>
+                    <p class="text-xs text-slate-500 mb-4">Banners appear on the home screen carousel.</p>
+                    <form onsubmit="handleBannerUpload(event)" class="space-y-4">
+                        <div><label class="block text-sm font-medium mb-1">Title</label><input type="text" id="banner-title" class="form-input" required placeholder="Master Your Exams"></div>
+                        <div><label class="block text-sm font-medium mb-1">Subtitle</label><input type="text" id="banner-subtitle" class="form-input" placeholder="New Courses Available"></div>
+                        <div><label class="block text-sm font-medium mb-1">Action URL</label><input type="url" id="banner-url" class="form-input" placeholder="https://..."></div>
+                        <div><label class="block text-sm font-medium mb-1">Banner Image</label>
+                            <input type="file" id="banner-file" class="form-input p-2 bg-slate-50" accept="image/*" required>
+                            <p class="text-xs text-slate-400 mt-1">Recommended: 1200×400, JPG/PNG</p></div>
+                        <button type="submit" id="btn-banner" class="btn-primary w-full bg-purple-600 hover:bg-purple-700">Upload Banner</button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- JAVASCRIPT -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<script>
+const API_BASE = "https://campusify-wowg.onrender.com";
+const BUNNY_LIBRARY_ID = "736385";
+let ADMIN_TOKEN = localStorage.getItem('admin_jwt') || null;
+const subjectCache = {};
+
+// ── Security ──────────────────────────────────────────────────────────
+function escapeHTML(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────
+function showToast(msg, type='success') {
+    const c = document.getElementById('toast-container'), t = document.createElement('div');
+    const bg = {success:'bg-emerald-500',error:'bg-red-500',warning:'bg-amber-500',info:'bg-blue-500'}[type]||'bg-slate-600';
+    const ic = {success:'fa-check-circle',error:'fa-circle-xmark',warning:'fa-triangle-exclamation',info:'fa-info-circle'}[type]||'fa-info-circle';
+    t.className = `${bg} text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-3 toast-enter min-w-[280px] max-w-sm`;
+    t.innerHTML = `<i class="fa-solid ${ic} text-lg flex-shrink-0"></i><span class="text-sm font-medium">${escapeHTML(msg)}</span>`;
+    c.appendChild(t);
+    setTimeout(() => { t.classList.replace('toast-enter','toast-exit'); setTimeout(() => t.remove(), 300); }, 4500);
+}
+
+// ── API ───────────────────────────────────────────────────────────────
+async function apiCall(endpoint, opts={}) {
+    const url = `${API_BASE}${endpoint}`, headers = {...opts.headers};
+    if (ADMIN_TOKEN) headers['Authorization'] = `Bearer ${ADMIN_TOKEN}`;
+    if (opts.body && typeof opts.body === 'object' && !(opts.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(opts.body);
+    }
+    const response = await fetch(url, {...opts, headers});
+    let data = {}; const text = await response.text();
+    try { data = text ? JSON.parse(text) : {}; } catch(e) { data = {message: text}; }
+    if (!response.ok) {
+        if (response.status === 401 || response.status === 403) handleLogout();
+        throw new Error(data.message || `Error ${response.status}`);
+    }
+    return data;
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────
+function checkAuth() {
+    if (ADMIN_TOKEN) {
+        document.getElementById('login-screen').classList.add('hide');
+        document.getElementById('app-container').classList.remove('hide');
+        loadDashboardStats();
+    } else {
+        document.getElementById('login-screen').classList.remove('hide');
+        document.getElementById('app-container').classList.add('hide');
+    }
+}
+async function handleLogin(e) {
+    e.preventDefault();
+    const btn = document.getElementById('login-btn'), orig = btn.innerHTML;
+    btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Signing in...`; btn.disabled = true;
+    try {
+        const res = await apiCall('/api/auth/login', { method:'POST', body:{
+            email: document.getElementById('login-email').value,
+            password: document.getElementById('login-password').value,
+            deviceId: document.getElementById('login-device-id').value
+        }});
+        let token = res.token || res.accessToken || (res.data && (res.data.token || res.data.accessToken));
+        if (!token) throw new Error("Token not found");
+        ADMIN_TOKEN = token; localStorage.setItem('admin_jwt', token);
+        showToast('Login successful!'); checkAuth();
+    } catch(err) { showToast(err.message,'error'); }
+    finally { btn.innerHTML = orig; btn.disabled = false; }
+}
+async function handleLogout() {
+    try { await apiCall('/api/auth/logout',{method:'POST'}); } catch(e){}
+    ADMIN_TOKEN = null; localStorage.removeItem('admin_jwt'); checkAuth(); showToast('Logged out','info');
+}
+
+// ── View Switcher ─────────────────────────────────────────────────────
+const viewTitles = {dashboard:'Dashboard',  'saved-data':'Saved Data Explorer', curriculum:'Curriculum Builder',
+    content:'Content Uploads', users:'Security & Users', banners:'Banners'};
+function switchView(id) {
+    document.getElementById('page-title').innerText = viewTitles[id]||id;
+    document.querySelectorAll('.view-section').forEach(el => el.classList.add('hide'));
+    document.getElementById('view-'+id).classList.remove('hide');
+    document.querySelectorAll('.nav-link').forEach(el => {
+        el.classList.remove('bg-slate-800','border-r-4','border-indigo-500');
+        if (el.dataset.view===id) el.classList.add('bg-slate-800','border-r-4','border-indigo-500');
+    });
+    if (id==='dashboard') loadDashboardStats();
+    if (id==='saved-data') fetchSavedBranches();
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────
+async function loadDashboardStats() {
+    try {
+        const r = await apiCall('/api/admin/dashboard-stats',{method:'GET'});
+        const d = r.data||r, u = d.users||{}, c = d.content||{};
+        document.getElementById('stat-students').innerText = u.total ?? '--';
+        document.getElementById('stat-semesters').innerText = c.semesters ?? '--';
+        document.getElementById('stat-content').innerText = c.files ?? '--';
+        document.getElementById('stat-active').innerText = u.activeLast24h ?? '--';
+    } catch(e){ console.warn('Stats:', e.message); }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────
+function extractArr(r, k) {
+    if (!r) return []; if (Array.isArray(r)) return r;
+    if (r[k] && Array.isArray(r[k])) return r[k];
+    if (r.data && Array.isArray(r.data)) return r.data;
+    if (r.data && r.data[k]) return r.data[k]; return [];
+}
+function copyToClipboard(text, ev) {
+    if (ev) ev.stopPropagation();
+    navigator.clipboard.writeText(text).then(() => showToast('Copied!','success')).catch(() => showToast('Copy failed','error'));
+}
+function pasteFrom(srcId, targetId) {
+    const v = document.getElementById(srcId)?.innerText?.trim();
+    if (v) { document.getElementById(targetId).value = v; showToast('Pasted!','info'); }
+    else showToast('Create it first','warning');
+}
+async function runBtn(id, fn) {
+    const b = document.getElementById(id); if (!b) return fn();
+    const o = b.innerHTML; b.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Processing...`; b.disabled = true;
+    try { await fn(); } finally { b.innerHTML = o; b.disabled = false; }
+}
+
+// ── Saved Data — Branches ─────────────────────────────────────────────
+async function fetchSavedBranches() {
+    const list = document.getElementById('saved-branches-list');
+    list.innerHTML = '<p class="text-sm text-slate-400 text-center py-8"><i class="fa-solid fa-spinner fa-spin"></i></p>';
+    try {
+        const branches = extractArr(await apiCall('/api/curriculum/branches',{method:'GET'}), 'branches');
+        if (!branches.length) { list.innerHTML = '<p class="text-sm text-slate-400 text-center py-8">No branches. Create one in Curriculum.</p>'; return; }
+        list.innerHTML = branches.map(b => { const id = b._id||b.id;
+            return `<div class="p-3 border border-slate-200 rounded-lg hover:border-indigo-400 cursor-pointer bg-white group" onclick="fetchSavedSemesters('${id}')">
+                <div class="flex justify-between items-center"><span class="font-semibold text-sm">${escapeHTML(b.name)}</span><span class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded">${escapeHTML(b.shortName||'')}</span></div>
+                <div class="flex justify-between items-center mt-2"><code class="text-xs text-slate-400 select-all truncate max-w-[160px]">${escapeHTML(id)}</code>
+                <button onclick="copyToClipboard('${id}',event)" class="text-xs text-indigo-600 opacity-0 group-hover:opacity-100"><i class="fa-regular fa-copy"></i></button></div></div>`;
+        }).join('');
+        document.getElementById('saved-semesters-list').innerHTML = '<p class="text-sm text-slate-400 text-center py-8">Select a branch ↑</p>';
+        document.getElementById('saved-subjects-list').innerHTML = '<p class="text-sm text-slate-400 text-center py-8">Select a semester</p>';
+    } catch(e) { list.innerHTML = `<p class="text-sm text-red-500 text-center py-4">${escapeHTML(e.message)}</p>`; }
+}
+
+// ── Saved Data — Semesters (Admin: shows ALL including drafts) ────────
+let currentBranchId = null; // Track for refresh after toggle
+async function fetchSavedSemesters(branchId) {
+    currentBranchId = branchId;
+    const list = document.getElementById('saved-semesters-list');
+    list.innerHTML = '<p class="text-sm text-slate-400 text-center py-8"><i class="fa-solid fa-spinner fa-spin"></i></p>';
+    try {
+        // Use admin endpoint to get ALL semesters (published + drafts)
+        const sems = extractArr(await apiCall(`/api/admin/semesters/${branchId}`,{method:'GET'}), 'semesters');
+        if (!sems.length) { list.innerHTML = '<p class="text-sm text-slate-400 text-center py-8">No semesters.</p>'; return; }
+        list.innerHTML = sems.map(s => { const id = s._id||s.id;
+            const isPub = s.isPublished;
+            const badge = isPub
+                ? `<span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-circle text-[6px]"></i>Published</span>`
+                : `<span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200"><i class="fa-solid fa-circle text-[6px]"></i>Draft</span>`;
+            const toggleBtn = isPub
+                ? `<button onclick="toggleSemesterPublish('${id}',event)" id="btn-pub-${id}" class="text-[10px] px-2 py-1 rounded bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 font-semibold" title="Unpublish"><i class="fa-solid fa-eye-slash"></i> Unpublish</button>`
+                : `<button onclick="toggleSemesterPublish('${id}',event)" id="btn-pub-${id}" class="text-[10px] px-2 py-1 rounded bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 font-semibold" title="Publish"><i class="fa-solid fa-eye"></i> Publish</button>`;
+            const borderClass = isPub ? 'border-slate-200' : 'border-amber-300 border-dashed';
+            return `<div class="p-3 border ${borderClass} rounded-lg hover:border-purple-400 cursor-pointer bg-white group" onclick="fetchSavedSubjects('${id}')" id="sem-card-${id}">
+                <div class="flex justify-between items-start"><span class="font-semibold text-sm">${escapeHTML(s.title)}</span><span class="text-xs text-emerald-600 font-semibold">₹${escapeHTML(String(s.price||0))}</span></div>
+                <div class="flex items-center gap-2 mt-1.5">
+                    <span class="text-xs text-slate-400">Sem ${escapeHTML(String(s.semNumber||'?'))}</span>
+                    ${badge}
+                </div>
+                <div class="flex justify-between items-center mt-2"><code class="text-xs text-slate-400 select-all truncate max-w-[110px]">${escapeHTML(id)}</code>
+                <div class="flex gap-2 items-center">
+                    ${toggleBtn}
+                    <button onclick="copyToClipboard('${id}',event)" class="text-xs text-purple-600 opacity-0 group-hover:opacity-100"><i class="fa-regular fa-copy"></i></button>
+                </div></div></div>`;
+        }).join('');
+        document.getElementById('saved-subjects-list').innerHTML = '<p class="text-sm text-slate-400 text-center py-8">Select a semester ↑</p>';
+    } catch(e) { list.innerHTML = `<p class="text-sm text-red-500 text-center py-4">${escapeHTML(e.message)}</p>`; }
+}
+
+// ── Toggle Semester Publish/Unpublish ─────────────────────────────────
+async function toggleSemesterPublish(semesterId, ev) {
+    if (ev) ev.stopPropagation();
+    const btn = document.getElementById('btn-pub-'+semesterId);
+    if (btn) { btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>'; btn.disabled = true; }
+    try {
+        const r = await apiCall(`/api/admin/semester/${semesterId}/toggle-publish`, {method:'PATCH'});
+        showToast(r.message || 'Status toggled!');
+        // Refresh the semester list to show updated status
+        if (currentBranchId) fetchSavedSemesters(currentBranchId);
+    } catch(e) {
+        showToast(e.message, 'error');
+        if (btn) { btn.innerHTML = '<i class="fa-solid fa-eye"></i> Toggle'; btn.disabled = false; }
+    }
+}
+
+// ── Saved Data — Subjects + Bunny Collection ──────────────────────────
+async function fetchSavedSubjects(semesterId) {
+    const list = document.getElementById('saved-subjects-list');
+    list.innerHTML = '<p class="text-sm text-slate-400 text-center py-8"><i class="fa-solid fa-spinner fa-spin"></i></p>';
+    try {
+        const subs = extractArr(await apiCall(`/api/curriculum/subjects/${semesterId}`,{method:'GET'}), 'subjects');
+        if (!subs.length) { list.innerHTML = '<p class="text-sm text-slate-400 text-center py-8">No subjects.</p>'; return; }
+        subs.forEach(s => { subjectCache[s._id||s.id] = s; });
+        list.innerHTML = subs.map(sub => {
+            const id = sub._id||sub.id, has = !!sub.bunnyCollectionId;
+            const badge = has
+                ? `<span class="collection-badge-ok"><i class="fa-solid fa-check"></i> Bunny ✓</span>`
+                : `<span class="collection-badge-missing"><i class="fa-solid fa-xmark"></i> No Folder</span>`;
+            const action = has
+                ? `<div class="text-xs text-slate-400 mt-1">Collection: <code class="select-all bg-white px-1 rounded">${escapeHTML(sub.bunnyCollectionId)}</code><button onclick="copyToClipboard('${escapeHTML(sub.bunnyCollectionId)}',event)" class="ml-1 text-indigo-600"><i class="fa-regular fa-copy"></i></button></div>`
+                : `<button id="btn-c-${escapeHTML(id)}" onclick="createCollectionForSubject('${id}','${escapeHTML(sub.name).replace(/'/g,"\\'")}','btn-c-${escapeHTML(id)}')" class="mt-2 flex items-center gap-1 px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-semibold"><i class="fa-solid fa-folder-plus"></i> Create Bunny Folder</button>`;
+            return `<div class="p-3 border border-slate-200 rounded-lg bg-white group" id="sc-${escapeHTML(id)}">
+                <div class="flex items-start justify-between"><span class="font-semibold text-sm">${escapeHTML(sub.name)}</span>${badge}</div>
+                ${action}
+                <div class="flex justify-between items-center mt-2"><code class="text-xs text-slate-400 select-all truncate max-w-[130px]">${escapeHTML(id)}</code>
+                <div class="flex gap-2 opacity-0 group-hover:opacity-100">
+                    <button onclick="copyToClipboard('${id}',event)" class="text-xs text-emerald-600"><i class="fa-regular fa-copy"></i> ID</button>
+                    <button onclick="prefillContent('${id}')" class="text-xs text-indigo-600"><i class="fa-solid fa-arrow-right"></i> Upload</button>
+                </div></div></div>`;
+        }).join('');
+    } catch(e) { list.innerHTML = `<p class="text-sm text-red-500 text-center py-4">${escapeHTML(e.message)}</p>`; }
+}
+
+// ── Create Bunny Collection for Subject ───────────────────────────────
+async function createCollectionForSubject(subjectId, name, btnId) {
+    const btn = document.getElementById(btnId);
+    if (btn) { btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i>`; btn.disabled = true; }
+    try {
+        const r = await apiCall(`/api/admin/subject/${subjectId}/create-collection`, { method:'POST', body:{collectionName:name} });
+        const cid = r.bunnyCollectionId;
+        showToast(`Bunny folder created for "${name}"!`,'success');
+        if (subjectCache[subjectId]) subjectCache[subjectId].bunnyCollectionId = cid;
+        // Update inline curriculum result
+        const inl = document.getElementById('coll-result-inline');
+        const inlId = document.getElementById('coll-result-inline-id');
+        if (inl && inlId) { inl.classList.remove('hide'); inlId.innerText = cid; }
+        // Update card in saved data
+        const card = document.getElementById('sc-'+subjectId);
+        if (card) {
+            card.innerHTML = `<div class="flex items-start justify-between"><span class="font-semibold text-sm">${escapeHTML(name)}</span>
+                <span class="collection-badge-ok"><i class="fa-solid fa-check"></i> Bunny ✓</span></div>
+                <div class="text-xs text-slate-400 mt-1">Collection: <code class="select-all bg-white px-1 rounded">${escapeHTML(cid)}</code><button onclick="copyToClipboard('${escapeHTML(cid)}',event)" class="ml-1 text-indigo-600"><i class="fa-regular fa-copy"></i></button></div>
+                <div class="flex justify-between items-center mt-2"><code class="text-xs text-slate-400 select-all truncate max-w-[130px]">${escapeHTML(subjectId)}</code>
+                <button onclick="prefillContent('${subjectId}')" class="text-xs text-indigo-600"><i class="fa-solid fa-arrow-right"></i> Upload</button></div>`;
+        }
+    } catch(e) {
+        showToast(e.message,'error');
+        if (btn) { btn.innerHTML = `<i class="fa-solid fa-folder-plus"></i> Create Bunny Folder`; btn.disabled = false; }
+    }
+}
+
+// ── Load Subject Info (content forms) ─────────────────────────────────
+function loadSubjectInfo(inputId, infoBoxId, hiddenId) {
+    const sid = document.getElementById(inputId).value.trim();
+    if (!sid) { showToast('Enter a Subject ID first','warning'); return; }
+    const sub = subjectCache[sid];
+    const box = document.getElementById(infoBoxId);
+    const nameEl = box?.querySelector('[id$="subject-name"]') || box?.querySelector('p');
+    const statusEl = box?.querySelector('[id$="coll-status"]') || box?.querySelector('span:last-child');
+    const hidden = document.getElementById(hiddenId);
+    box.classList.remove('hide');
+    if (sub) {
+        if (nameEl) nameEl.textContent = sub.name;
+        const has = !!sub.bunnyCollectionId;
+        if (statusEl) statusEl.innerHTML = has
+            ? `<span class="collection-badge-ok"><i class="fa-solid fa-check"></i> ${escapeHTML(sub.bunnyCollectionId.substring(0,12))}...</span>`
+            : `<span class="collection-badge-missing"><i class="fa-solid fa-xmark"></i> Go to Saved Data → create folder first</span>`;
+        if (hidden) hidden.value = sub.bunnyCollectionId || '';
+    } else {
+        if (nameEl) nameEl.textContent = `ID: ${sid}`;
+        if (statusEl) statusEl.innerHTML = `<span class="text-xs text-amber-600">Open Saved Data first to load subjects</span>`;
+        if (hidden) hidden.value = '';
+    }
+}
+
+// ── Prefill Content Form from Saved Data ──────────────────────────────
+function prefillContent(subjectId) {
+    const sub = subjectCache[subjectId]; if (!sub) return;
+    document.getElementById('upload-sub-id').value = subjectId;
+    document.getElementById('link-sub-id').value = subjectId;
+    loadSubjectInfo('upload-sub-id','upload-subject-info','upload-coll-id');
+    loadSubjectInfo('link-sub-id','link-subject-info','link-coll-id');
+    switchView('content');
+    showToast(`"${sub.name}" loaded in forms`,'success');
+}
+
+// ── Curriculum Forms ──────────────────────────────────────────────────
+async function handleCreateBranch(e) {
+    e.preventDefault();
+    await runBtn('btn-create-branch', async () => {
+        try {
+            const detailsUrl = document.getElementById('branch-details-url').value.trim();
+            const body = {
+                name:document.getElementById('branch-name').value,
+                shortName:document.getElementById('branch-short').value,
+                description:document.getElementById('branch-desc').value
+            };
+            if (detailsUrl) body.detailsUrl = detailsUrl;
+            const r = await apiCall('/api/admin/branch',{method:'POST',body});
+            const id = r.branch?._id || r._id || r.id || '';
+            document.getElementById('branch-result-id').innerText = id;
+            document.getElementById('branch-result').classList.remove('hide');
+            showToast('Branch created!'); e.target.reset();
+        } catch(e) { showToast(e.message,'error'); }
+    });
+}
+async function handleCreateSemester(e) {
+    e.preventDefault();
+    await runBtn('btn-create-semester', async () => {
+        try {
+            const detailsUrl = document.getElementById('sem-details-url').value.trim();
+            const body = {
+                branchId:document.getElementById('sem-branch-id').value,
+                title:document.getElementById('sem-title').value,
+                semNumber:parseInt(document.getElementById('sem-number').value),
+                description:document.getElementById('sem-desc').value,
+                price:parseFloat(document.getElementById('sem-price').value)
+            };
+            if (detailsUrl) body.detailsUrl = detailsUrl;
+            const r = await apiCall('/api/admin/semester',{method:'POST',body});
+            const id = r.semester?._id || r._id || r.id || '';
+            document.getElementById('semester-result-id').innerText = id;
+            document.getElementById('semester-result').classList.remove('hide');
+            showToast('Semester created!'); e.target.reset();
+        } catch(e) { showToast(e.message,'error'); }
+    });
+}
+async function handleCreateSubject(e) {
+    e.preventDefault();
+    await runBtn('btn-create-subject', async () => {
+        try {
+            const r = await apiCall('/api/admin/subject',{method:'POST',body:{
+                branchId:document.getElementById('sub-branch-id').value,
+                semesterId:document.getElementById('sub-sem-id').value,
+                name:document.getElementById('sub-name').value,
+                subjectCode:document.getElementById('sub-code').value,
+                orderSequence:parseInt(document.getElementById('sub-order').value)
+            }});
+            const id = r.subject?._id || r._id || r.id || '';
+            const name = r.subject?.name || document.getElementById('sub-name').value;
+            document.getElementById('subject-result-id').innerText = id;
+            document.getElementById('subject-result').classList.remove('hide');
+            document.getElementById('coll-result-inline').classList.add('hide');
+            if (id) subjectCache[id] = {_id:id, name, bunnyCollectionId:null};
+            showToast(`Subject "${name}" created!`);
+        } catch(e) { showToast(e.message,'error'); }
+    });
+}
+
+// ── Content — File Upload ─────────────────────────────────────────────
+async function handleFileUpload(e) {
+    e.preventDefault();
+    const file = document.getElementById('upload-file');
+    if (!file.files.length) { showToast('Select a file','warning'); return; }
+    await runBtn('btn-file-upload', async () => {
+        try {
+            const fd = new FormData();
+            fd.append('subjectId', document.getElementById('upload-sub-id').value);
+            fd.append('unit', document.getElementById('upload-unit').value);
+            fd.append('type', document.getElementById('upload-type').value);
+            fd.append('title', document.getElementById('upload-title').value);
+            fd.append('orderSequence', document.getElementById('upload-order').value||'1');
+            fd.append('category', document.getElementById('upload-category').value);
+            const cid = document.getElementById('upload-coll-id').value;
+            if (cid) fd.append('bunnyCollectionId', cid);
+            fd.append('file', file.files[0]);
+            await apiCall('/api/admin/content',{method:'POST',body:fd});
+            showToast('Content uploaded & saved!'); e.target.reset();
+            document.getElementById('upload-subject-info').classList.add('hide');
+            document.getElementById('upload-coll-id').value = '';
+        } catch(err) { showToast(err.message,'error'); }
+    });
+}
+
+// ── Content — Link Existing Bunny Video ───────────────────────────────
+async function handleLinkVideo(e) {
+    e.preventDefault();
+    await runBtn('btn-link-video', async () => {
+        try {
+            await apiCall('/api/admin/content/add',{method:'POST',body:{
+                subjectId: document.getElementById('link-sub-id').value,
+                title: document.getElementById('link-title').value,
+                type: 'video',
+                unit: document.getElementById('link-unit').value,
+                fileKey: document.getElementById('link-filekey').value.trim(),
+                bunnyLibraryId: document.getElementById('link-lib-id').value || BUNNY_LIBRARY_ID,
+                bunnyCollectionId: document.getElementById('link-coll-id').value || null,
+                category: document.getElementById('link-category').value,
+                isFree: document.getElementById('link-isfree').checked,
+                orderSequence: parseInt(document.getElementById('link-order').value)||1
+            }});
+            showToast('Video linked!'); e.target.reset();
+            document.getElementById('link-lib-id').value = BUNNY_LIBRARY_ID;
+            document.getElementById('link-subject-info').classList.add('hide');
+            document.getElementById('link-coll-id').value = '';
+        } catch(e) { showToast(e.message,'error'); }
+    });
+}
+
+// ── Users / Security ──────────────────────────────────────────────────
+async function toggleBan() {
+    await runBtn('btn-ban', async () => {
+        const email = document.getElementById('ban-email').value;
+        if (!email) { showToast('Enter email','warning'); return; }
+        try {
+            const r = await apiCall('/api/admin/security/toggle-ban',{method:'POST',body:{email, banDays:parseInt(document.getElementById('ban-days').value)||0, reason:'Admin panel'}});
+            showToast(r.message || `Ban toggled for ${email}`);
+        } catch(e) { showToast(e.message,'error'); }
+    });
+}
+async function unlockDevice() {
+    await runBtn('btn-unlock', async () => {
+        const email = document.getElementById('unlock-email').value;
+        if (!email) { showToast('Enter email','warning'); return; }
+        try {
+            await apiCall('/api/admin/security/unlock-device',{method:'POST',body:{email}});
+            showToast(`Device unlocked for ${email}`);
+        } catch(e) { showToast(e.message,'error'); }
+    });
+}
+async function changePassword() {
+    await runBtn('btn-pwd', async () => {
+        const userId = document.getElementById('pwd-user-id').value.trim();
+        const newPassword = document.getElementById('pwd-new').value.trim();
+        if (!userId || !newPassword) { showToast('Enter User ID and new password','warning'); return; }
+        try {
+            await apiCall('/api/admin/users/update-password',{method:'POST',body:{userId, newPassword}});
+            showToast('Password changed!');
+            document.getElementById('pwd-user-id').value = '';
+            document.getElementById('pwd-new').value = '';
+        } catch(e) { showToast(e.message,'error'); }
+    });
+}
+async function handleManualAccess(e) {
+    e.preventDefault();
+    await runBtn('btn-access', async () => {
+        try {
+            const action = document.getElementById('access-action').value;
+            await apiCall('/api/admin/users/manual-access',{method:'POST',body:{
+                email:document.getElementById('access-email').value,
+                semesterId:document.getElementById('access-sem-id').value, action
+            }});
+            showToast(`Access ${action}ed!`); e.target.reset();
+        } catch(e) { showToast(e.message,'error'); }
+    });
+}
+async function handleBulkUpload() {
+    const f = document.getElementById('bulk-csv');
+    if (!f.files?.length) { showToast('Select CSV','warning'); return; }
+    await runBtn('btn-bulk', async () => {
+        try {
+            const fd = new FormData(); fd.append('file', f.files[0]);
+            const r = await apiCall('/api/admin/users/bulk-upload',{method:'POST',body:fd});
+            showToast(`Uploaded: ${r.stats?.uploaded??'?'} | Skipped: ${r.stats?.skippedOrFailed??'?'}`);
+            f.value = '';
+        } catch(e) { showToast(e.message,'error'); }
+    });
+}
+
+// ── Banners ───────────────────────────────────────────────────────────
+async function handleBannerUpload(e) {
+    e.preventDefault();
+    await runBtn('btn-banner', async () => {
+        try {
+            const fd = new FormData();
+            fd.append('title', document.getElementById('banner-title').value);
+            fd.append('subtitle', document.getElementById('banner-subtitle').value);
+            fd.append('actionUrl', document.getElementById('banner-url').value);
+            fd.append('file', document.getElementById('banner-file').files[0]);
+            await apiCall('/api/admin/banner',{method:'POST',body:fd});
+            showToast('Banner uploaded!'); e.target.reset();
+        } catch(e) { showToast(e.message,'error'); }
+    });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => checkAuth());
+</script>
+</body>
+</html>

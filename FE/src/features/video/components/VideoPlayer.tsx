@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, TouchableOpacity, ActivityIndicator, Text, StyleSheet, Platform } from 'react-native';
+import { View, TouchableOpacity, ActivityIndicator, Text, StyleSheet, Platform, Animated } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { X, WifiOff, AlertTriangle, RotateCcw } from 'lucide-react-native';
 import { getBunnyHlsUrl } from '@/src/core/config/bunny';
+import { useUserStore } from '@/src/core/stores/user.store';
 
 interface VideoPlayerProps {
   bunnyVideoId?: string | null;
@@ -13,12 +14,56 @@ interface VideoPlayerProps {
 }
 
 const MAX_RETRIES = 3;
+const WATERMARK_INTERVAL = 5000; // move every 5 seconds
+
+// ── Floating Watermark — forensic user identification on screen recording ─────
+function FloatingWatermark({ email, phone }: { email: string; phone: string }) {
+  const left   = useRef(new Animated.Value(30)).current;
+  const top    = useRef(new Animated.Value(40)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  const maskedPhone = phone ? phone.slice(0, 5) + 'XXXXX' : '';
+
+  const moveTo = useCallback(() => {
+    Animated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: false }).start(() => {
+      // random %, clamped so text stays within typical 16:9 player (% of container)
+      const newLeft = 5 + Math.random() * 60;   // 5% – 65%
+      const newTop  = 5 + Math.random() * 70;   // 5% – 75%
+      left.setValue(newLeft);
+      top.setValue(newTop);
+      Animated.timing(opacity, { toValue: 0.3, duration: 600, useNativeDriver: false }).start();
+    });
+  }, [opacity, left, top]);
+
+  useEffect(() => {
+    const init = setTimeout(() =>
+      Animated.timing(opacity, { toValue: 0.3, duration: 800, useNativeDriver: false }).start()
+    , 1200);
+    const interval = setInterval(moveTo, WATERMARK_INTERVAL);
+    return () => { clearTimeout(init); clearInterval(interval); };
+  }, [moveTo, opacity]);
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[styles.watermark, { opacity, left: left.interpolate({ inputRange: [0,100], outputRange: ['0%','100%'] }), top: top.interpolate({ inputRange: [0,100], outputRange: ['0%','100%'] }) }]}
+    >
+      <Text style={styles.watermarkText}>{email}</Text>
+      {!!maskedPhone && <Text style={styles.watermarkText}>{maskedPhone}</Text>}
+    </Animated.View>
+  );
+}
 
 export default function VideoPlayer({ bunnyVideoId, hlsUrl, isActive, onClose }: VideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [errorType, setErrorType] = useState<'network' | 'source' | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+
+  // ── Watermark: get logged-in user's identity ──────────────────────────
+  const profile = useUserStore((s) => s.profile);
+  const wmEmail = profile?.email ?? '';
+  const wmPhone = profile?.phoneNo ?? '';
 
   // ── GUARD: Never render player with invalid ID ────────────────────────
   if (!bunnyVideoId || bunnyVideoId === 'null' || bunnyVideoId === 'undefined') {
@@ -186,6 +231,11 @@ export default function VideoPlayer({ bunnyVideoId, hlsUrl, isActive, onClose }:
           <X color="#ffffff" size={20} />
         </TouchableOpacity>
       )}
+
+      {/* 🔒 Forensic Watermark — floats + moves every 5s so screen recordings are traceable */}
+      {!hasError && !!wmEmail && (
+        <FloatingWatermark email={wmEmail} phone={wmPhone} />
+      )}
     </View>
   );
 }
@@ -265,5 +315,23 @@ const styles = StyleSheet.create({
     zIndex: 10,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.18)',
+  },
+  // Forensic watermark — absolute position, moves every 5s
+  watermark: {
+    position: 'absolute',
+    zIndex: 9,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  watermarkText: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    textShadowColor: 'rgba(0,0,0,0.9)',
+    textShadowOffset: { width: 0.5, height: 0.5 },
+    textShadowRadius: 3,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
 });
