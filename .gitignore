@@ -2,3 +2,12 @@
 .vscode/
 *.log
 .DS_Store
+
+# Sensitive and local files
+.env
+.env.*
+campusify_admin.html
+BE/compusify.json
+BE/checkpass.js
+BE/fix-bunny-data.js
+BE/get-bunny-key.js

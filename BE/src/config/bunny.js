@@ -271,3 +271,83 @@ export const getBunnyVideoDetails = async (videoGuid) => {
         throw new Error(`Failed to get video details: ${error.response?.data?.Message || error.message}`);
     }
 };
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 📁 Bunny.net Edge Storage — For PDFs, Images & Static Files
+// ══════════════════════════════════════════════════════════════════════════════
+// Unlike Bunny Stream (video-only), Edge Storage handles any file type.
+// Files are uploaded to a Storage Zone and served via a connected Pull Zone CDN.
+
+const getStorageZone = () => (process.env.BUNNY_STORAGE_ZONE || 'campusify-releases').trim();
+const getStorageApiKey = () => (process.env.BUNNY_STORAGE_API_KEY || '').trim();
+const getStorageEndpoint = () => (process.env.BUNNY_STORAGE_ENDPOINT || 'https://sg.storage.bunnycdn.com').trim();
+const getStorageCdnUrl = () => (process.env.BUNNY_STORAGE_CDN_URL || 'https://campusify-releases.b-cdn.net').trim();
+
+/**
+ * Uploads a file to Bunny Edge Storage.
+ * The file is placed under /pdfs/{subjectId}/{filename} for organized storage.
+ *
+ * @param {string} localFilePath - Path to the local file to upload
+ * @param {string} storagePath - Path within the storage zone (e.g., "pdfs/subjectId/filename.pdf")
+ * @returns {Promise<string>} CDN URL of the uploaded file
+ */
+export const uploadToBunnyStorage = async (localFilePath, storagePath) => {
+    const storageZone = getStorageZone();
+    const apiKey = getStorageApiKey();
+    const endpoint = getStorageEndpoint();
+
+    if (!apiKey) {
+        throw new Error("Missing BUNNY_STORAGE_API_KEY in environment variables.");
+    }
+
+    const uploadUrl = `${endpoint}/${storageZone}/${storagePath}`;
+    console.log(`\n[Bunny Storage] PUT ${uploadUrl}`);
+
+    try {
+        const stats = fs.statSync(localFilePath);
+        const fileStream = fs.createReadStream(localFilePath);
+
+        await axios.put(uploadUrl, fileStream, {
+            headers: {
+                'AccessKey': apiKey,
+                'Content-Type': 'application/octet-stream',
+                'Content-Length': stats.size,
+            },
+            maxBodyLength: Infinity,
+            maxContentLength: Infinity,
+        });
+
+        const cdnUrl = `${getStorageCdnUrl()}/${storagePath}`;
+        console.log(`✅ File uploaded to Bunny Storage: ${cdnUrl}`);
+        return cdnUrl;
+    } catch (error) {
+        console.error("❌ Bunny Storage Upload Error:", error?.response?.data || error.message);
+        throw new Error(`Failed to upload to Bunny Storage: ${error.response?.data?.Message || error.message}`);
+    }
+};
+
+/**
+ * Deletes a file from Bunny Edge Storage.
+ *
+ * @param {string} storagePath - Path within the storage zone (e.g., "pdfs/subjectId/filename.pdf")
+ * @returns {Promise<void>}
+ */
+export const deleteFromBunnyStorage = async (storagePath) => {
+    const storageZone = getStorageZone();
+    const apiKey = getStorageApiKey();
+    const endpoint = getStorageEndpoint();
+
+    const deleteUrl = `${endpoint}/${storageZone}/${storagePath}`;
+    console.log(`\n[Bunny Storage] DELETE ${deleteUrl}`);
+
+    try {
+        await axios.delete(deleteUrl, {
+            headers: { 'AccessKey': apiKey },
+        });
+        console.log(`✅ File deleted from Bunny Storage: ${storagePath}`);
+    } catch (error) {
+        console.error("❌ Bunny Storage Delete Error:", error?.response?.data || error.message);
+        throw new Error(`Failed to delete from Bunny Storage: ${error.response?.data?.Message || error.message}`);
+    }
+};
+

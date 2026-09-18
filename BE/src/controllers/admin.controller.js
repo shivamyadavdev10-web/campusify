@@ -10,6 +10,7 @@ import csv from 'csvtojson';
 import fs from 'fs';
 import axios from 'axios';
 import { createBunnyVideo, uploadBunnyVideo, deleteBunnyVideo, createBunnyCollection } from '../config/bunny.js';
+import { uploadToBunnyStorage, deleteFromBunnyStorage } from '../config/bunny.js';
 
 // ==========================================
 // 🗂️ BUNNY COLLECTION MANAGEMENT
@@ -337,8 +338,38 @@ export const uploadCourseContent = catchAsync(async (req, res) => {
                 fs.unlinkSync(req.file.path);
             }
         }
-    }
+    } else if (type.toLowerCase() === "pdf" || type.toLowerCase() === "notes") {
+        try {
+            console.log("📄 Initiating Bunny Storage Upload for PDF/Notes...");
+            
+            // Sanitize filename: remove spaces, special chars
+            const safeName = req.file.originalname
+                .replace(/[^a-zA-Z0-9._-]/g, '_')
+                .replace(/_+/g, '_');
+            const timestamp = Date.now();
+            const storagePath = `pdfs/${subjectId}/${timestamp}_${safeName}`;
 
+            // Upload to Bunny Storage -> returns CDN URL
+            const cdnUrl = await uploadToBunnyStorage(req.file.path, storagePath);
+            console.log(`✅ PDF uploaded to Bunny Storage: ${cdnUrl}`);
+
+            fileUrl = cdnUrl;
+            finalFileKey = storagePath; // Store storage path as key for future deletion
+
+        } catch (error) {
+            console.error("PDF UPLOAD ERROR:", error.response ? error.response.data : error.message);
+            return res.status(500).json({
+                status: false,
+                message: "Failed to upload PDF to Bunny Storage. No database entry was created.",
+                errorDetail: error.response?.data || error.message || "Unknown error"
+            });
+        } finally {
+            // Guaranteed cleanup of temp file
+            if (req.file && fs.existsSync(req.file.path)) {
+                fs.unlinkSync(req.file.path);
+            }
+        }
+    }
     try {
         // Save the returned Live URL to Database
         const newContent = await Content.create({ 
@@ -372,17 +403,21 @@ export const uploadCourseContent = catchAsync(async (req, res) => {
             } catch (cleanupError) {
                 console.error("⚠️ Failed to cleanup Bunny video after DB error:", cleanupError.message);
             }
+        } else if ((type.toLowerCase() === "pdf" || type.toLowerCase() === "notes") && finalFileKey) {
+            console.error("❌ DB save failed after PDF upload. Cleaning up Bunny Storage...");
+            try {
+                await deleteFromBunnyStorage(finalFileKey);
+                console.log(`🗑️ Bunny PDF ${finalFileKey} deleted after DB failure.`);
+            } catch (cleanupError) {
+                console.error("⚠️ Failed to cleanup Bunny PDF after DB error:", cleanupError.message);
+            }
         }
-        // If DB insertion fails, prevent disk bloat for non-video files
-        if (type.toLowerCase() !== "video" && req.file && fs.existsSync(req.file.path)) {
-            fs.unlinkSync(req.file.path);
-        }
-        throw new ApiError(500, "Database error: Failed to save content record. Bunny video was cleaned up.");
+        throw new ApiError(500, "Database error: Failed to save content record. Upload was cleaned up.");
     }
 });
 
 export const createContent = catchAsync(async (req, res) => {
-    const { subjectId, unit, title, type, category, fileKey, bunnyLibraryId, bunnyCollectionId, duration, isFree, orderSequence } = req.body;
+    const { subjectId, unit, title, type, category, fileKey, fileUrl, bunnyLibraryId, bunnyCollectionId, duration, isFree, orderSequence } = req.body;
 
     // Validate required fields
     if (!subjectId || !unit || !title || !type || orderSequence === undefined) {
@@ -392,6 +427,11 @@ export const createContent = catchAsync(async (req, res) => {
     // Sanitize fileKey: strip accidental library prefix
     const sanitizedFileKey = fileKey && fileKey.includes('/') ? fileKey.split('/').pop() : fileKey;
 
+    // Build the final fileUrl. If they provided one (e.g. for a PDF), use it.
+    // If it's a video and they didn't provide a URL, we generate the HLS URL on the fly during playback,
+    // so it's okay if fileUrl is null here for videos.
+    const finalFileUrl = fileUrl || null;
+
     // Create the content with the Bunny fileKey, library ID, and collection ID
     const newContent = await Content.create({
         subjectId,
@@ -400,6 +440,7 @@ export const createContent = catchAsync(async (req, res) => {
         type: type.toLowerCase(),
         category: category || "Resources",
         fileKey: sanitizedFileKey,
+        fileUrl: finalFileUrl,
         // Accept explicit bunnyLibraryId from body, or fall back to the current env var
         bunnyLibraryId: type.toLowerCase() === 'video'
             ? (bunnyLibraryId || process.env.BUNNY_STREAM_LIBRARY_ID || null)
