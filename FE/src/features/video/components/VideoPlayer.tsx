@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, TouchableOpacity, ActivityIndicator, Text, StyleSheet, Platform, Animated } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { X, WifiOff, AlertTriangle, RotateCcw } from 'lucide-react-native';
+import { X, WifiOff, AlertTriangle, RotateCcw, Volume2 } from 'lucide-react-native';
 import { getBunnyHlsUrl } from '@/src/core/config/bunny';
 import { useUserStore } from '@/src/core/stores/user.store';
 
@@ -70,7 +70,9 @@ export default function VideoPlayer({ bunnyVideoId, hlsUrl, isActive, onClose }:
     return (
       <View style={styles.container}>
         <View style={styles.overlay}>
-          <Text style={styles.errorIcon}>🎬</Text>
+          <View style={styles.errorIconCircle}>
+            <AlertTriangle color="#f87171" size={28} />
+          </View>
           <Text style={styles.errorTitle}>Video Unavailable</Text>
           <Text style={styles.errorMsg}>
             This video is not yet available.{'\n'}Please check back later.
@@ -82,7 +84,7 @@ export default function VideoPlayer({ bunnyVideoId, hlsUrl, isActive, onClose }:
             onPress={onClose}
             hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
           >
-            <X color="#ffffff" size={20} />
+            <X color="#ffffff" size={22} />
           </TouchableOpacity>
         )}
       </View>
@@ -100,6 +102,9 @@ export default function VideoPlayer({ bunnyVideoId, hlsUrl, isActive, onClose }:
   // ── Native Video Player ────────────────────────────────────────────────
   const player = useVideoPlayer(videoUrl, (p) => {
     p.loop = false;
+    // 🔊 Audio Fix: Force full volume & proper audio session mode
+    p.volume = 1.0;
+    p.audioMixingMode = 'auto';
     p.play();
   });
 
@@ -179,19 +184,27 @@ export default function VideoPlayer({ bunnyVideoId, hlsUrl, isActive, onClose }:
       {/* Loading overlay */}
       {isLoading && !hasError && (
         <View style={styles.overlay}>
-          <ActivityIndicator size="large" color="#818cf8" />
+          <View style={styles.loadingPulse}>
+            <ActivityIndicator size="large" color="#818cf8" />
+          </View>
           <Text style={styles.loadingText}>Loading video…</Text>
+          <View style={styles.loadingHint}>
+            <Volume2 color="rgba(255,255,255,0.3)" size={12} />
+            <Text style={styles.loadingHintText}>Make sure your volume is up</Text>
+          </View>
         </View>
       )}
 
       {/* Error state */}
       {hasError && (
         <View style={styles.overlay}>
-          {errorType === 'network' ? (
-            <WifiOff color="#f87171" size={40} />
-          ) : (
-            <AlertTriangle color="#f87171" size={40} />
-          )}
+          <View style={styles.errorIconCircle}>
+            {errorType === 'network' ? (
+              <WifiOff color="#f87171" size={28} />
+            ) : (
+              <AlertTriangle color="#f87171" size={28} />
+            )}
+          </View>
           <Text style={styles.errorTitle}>
             {errorType === 'network' ? 'No Internet' : 'Video Not Found'}
           </Text>
@@ -211,7 +224,7 @@ export default function VideoPlayer({ bunnyVideoId, hlsUrl, isActive, onClose }:
               onPress={handleRetry}
               activeOpacity={0.8}
             >
-              <RotateCcw color="#ffffff" size={14} style={{ marginRight: 6 }} />
+              <RotateCcw color="#ffffff" size={15} />
               <Text style={styles.retryText}>
                 Retry ({MAX_RETRIES - retryCount} left)
               </Text>
@@ -220,7 +233,7 @@ export default function VideoPlayer({ bunnyVideoId, hlsUrl, isActive, onClose }:
         </View>
       )}
 
-      {/* Close button — always visible */}
+      {/* Close button — always visible, premium style */}
       {onClose && (
         <TouchableOpacity
           style={styles.closeBtn}
@@ -228,7 +241,7 @@ export default function VideoPlayer({ bunnyVideoId, hlsUrl, isActive, onClose }:
           activeOpacity={0.7}
           hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
         >
-          <X color="#ffffff" size={20} />
+          <X color="#ffffff" size={22} />
         </TouchableOpacity>
       )}
 
@@ -244,52 +257,87 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     aspectRatio: 16 / 9,
-    backgroundColor: '#000',
+    backgroundColor: '#0a0a0f',
     position: 'relative',
     overflow: 'hidden',
+    borderRadius: 4,
   },
   videoView: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#0a0a0f',
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.92)',
+    backgroundColor: 'rgba(10, 10, 15, 0.95)',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
   },
+  // ── Loading ──
+  loadingPulse: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
   loadingText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 13,
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
     marginTop: 12,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  loadingHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
+    gap: 6,
+  },
+  loadingHintText: {
+    color: 'rgba(255,255,255,0.3)',
+    fontSize: 11,
     fontWeight: '500',
   },
-  errorIcon: {
-    fontSize: 38,
-    marginBottom: 12,
+  // ── Error ──
+  errorIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(248, 113, 113, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   errorTitle: {
     color: '#f87171',
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginTop: 12,
+    marginTop: 8,
     marginBottom: 6,
   },
   errorMsg: {
     color: 'rgba(255,255,255,0.5)',
     fontSize: 13,
     textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 19,
+    marginBottom: 24,
+    lineHeight: 20,
   },
   retryBtn: {
     backgroundColor: '#6366f1',
     paddingHorizontal: 28,
-    paddingVertical: 11,
-    borderRadius: 10,
+    paddingVertical: 12,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   retryText: {
     color: '#ffffff',
@@ -302,21 +350,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
   },
+  // ── Close Button ──
   closeBtn: {
     position: 'absolute',
     top: 12,
     right: 12,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    // shadow for visibility on bright videos
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 8,
   },
-  // Forensic watermark — absolute position, moves every 5s
+  // ── Forensic Watermark ──
   watermark: {
     position: 'absolute',
     zIndex: 9,

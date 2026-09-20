@@ -523,11 +523,11 @@ export default function HomeScreen() {
       <Modal
         visible={!!activeVideo}
         transparent
-        animationType="fade"
+        animationType="slide"
         statusBarTranslucent
         onRequestClose={() => setActiveVideo(null)}
       >
-        <View className="flex-1 bg-black justify-center">
+        <View className="flex-1 bg-[#0a0a0f] justify-center">
           {activeVideo && activeVideo.bunnyVideoId ? (
             <VideoErrorBoundary onError={() => setActiveVideo(null)}>
               <VideoPlayer
@@ -536,11 +536,20 @@ export default function HomeScreen() {
                 isActive={true}
                 onClose={() => setActiveVideo(null)}
               />
-              <View className="px-5 py-4">
-                <Text className="text-white font-bold text-base">{activeVideo.title}</Text>
-                <View className="flex-row items-center mt-1">
-                  <View className="bg-[#22c55e]/20 px-2 py-0.5 rounded-full">
-                    <Text className="text-[#22c55e] text-[11px] font-bold">FREE DEMO</Text>
+              <View className="px-5 py-4 border-t border-white/5">
+                <View className="flex-row items-start">
+                  <View className="w-9 h-9 rounded-lg bg-[#22c55e]/10 items-center justify-center mr-3 mt-0.5">
+                    <PlayCircle color="#22c55e" size={14} />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-gray-100 font-bold text-base leading-snug" numberOfLines={2}>
+                      {activeVideo.title}
+                    </Text>
+                    <View className="flex-row items-center mt-2">
+                      <View className="bg-[#22c55e]/15 px-2.5 py-1 rounded-lg">
+                        <Text className="text-[#22c55e] text-[10px] font-bold tracking-widest uppercase">FREE DEMO</Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
               </View>

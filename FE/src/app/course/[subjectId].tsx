@@ -168,7 +168,7 @@ export default function CourseContentScreen() {
       <Modal
         visible={!!activeVideo}
         transparent
-        animationType="fade"
+        animationType="slide"
         statusBarTranslucent
         onRequestClose={closeVideo}
       >
@@ -181,9 +181,20 @@ export default function CourseContentScreen() {
                 isActive={true}
                 onClose={closeVideo}
               />
-              {/* Video title bar below player */}
+              {/* Premium video title bar below player */}
               <View style={styles.videoTitleBar}>
-                <Text style={styles.videoTitle} numberOfLines={2}>{activeVideo.title}</Text>
+                <View style={styles.videoTitleRow}>
+                  <View style={styles.videoTitleIcon}>
+                    <BookOpen color="#818cf8" size={14} />
+                  </View>
+                  <View style={styles.videoTitleContent}>
+                    <Text style={styles.videoTitle} numberOfLines={2}>{activeVideo.title}</Text>
+                    <View style={styles.nowPlayingBadge}>
+                      <View style={styles.nowPlayingDot} />
+                      <Text style={styles.nowPlayingText}>Now Playing</Text>
+                    </View>
+                  </View>
+                </View>
               </View>
             </VideoErrorBoundary>
           )}
@@ -246,19 +257,59 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
     gap: 12,
   },
+  // ── Video Modal ──
   modalBg: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#0a0a0f',
     justifyContent: 'center',
   },
   videoTitleBar: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 18,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+  },
+  videoTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  videoTitleIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(129, 140, 248, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    marginTop: 2,
+  },
+  videoTitleContent: {
+    flex: 1,
   },
   videoTitle: {
     color: '#f3f4f6',
     fontWeight: 'bold',
     fontSize: 16,
     letterSpacing: 0.2,
+    lineHeight: 22,
+  },
+  nowPlayingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 6,
+  },
+  nowPlayingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#818cf8',
+  },
+  nowPlayingText: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
 });

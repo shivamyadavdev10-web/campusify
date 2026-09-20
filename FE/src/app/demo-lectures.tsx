@@ -117,7 +117,7 @@ export default function DemoLecturesScreen() {
       <Modal
         visible={!!activeVideo}
         transparent
-        animationType="fade"
+        animationType="slide"
         statusBarTranslucent
         onRequestClose={() => setActiveVideo(null)}
       >
@@ -131,9 +131,16 @@ export default function DemoLecturesScreen() {
                 onClose={() => setActiveVideo(null)}
               />
               <View style={modalStyles.titleBar}>
-                <Text style={modalStyles.title}>{activeVideo.title}</Text>
-                <View style={modalStyles.freeBadge}>
-                  <Text style={modalStyles.freeText}>FREE DEMO</Text>
+                <View style={modalStyles.titleRow}>
+                  <View style={modalStyles.titleIcon}>
+                    <PlayCircle color="#22c55e" size={14} />
+                  </View>
+                  <View style={modalStyles.titleContent}>
+                    <Text style={modalStyles.title} numberOfLines={2}>{activeVideo.title}</Text>
+                    <View style={modalStyles.freeBadge}>
+                      <Text style={modalStyles.freeText}>FREE DEMO</Text>
+                    </View>
+                  </View>
                 </View>
               </View>
             </VideoErrorBoundary>
@@ -145,9 +152,12 @@ export default function DemoLecturesScreen() {
 }
 
 const modalStyles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: '#000', justifyContent: 'center' },
-  titleBar: { paddingHorizontal: 20, paddingVertical: 16 },
-  title: { color: '#f3f4f6', fontWeight: 'bold', fontSize: 16 },
-  freeBadge: { backgroundColor: 'rgba(34, 197, 94, 0.15)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start', marginTop: 8 },
-  freeText: { color: '#22c55e', fontSize: 11, fontWeight: 'bold' },
+  bg: { flex: 1, backgroundColor: '#0a0a0f', justifyContent: 'center' },
+  titleBar: { paddingHorizontal: 20, paddingVertical: 18, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  titleIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(34, 197, 94, 0.12)', alignItems: 'center', justifyContent: 'center', marginRight: 12, marginTop: 2 },
+  titleContent: { flex: 1 },
+  title: { color: '#f3f4f6', fontWeight: 'bold', fontSize: 16, lineHeight: 22 },
+  freeBadge: { backgroundColor: 'rgba(34, 197, 94, 0.15)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, alignSelf: 'flex-start', marginTop: 8 },
+  freeText: { color: '#22c55e', fontSize: 10, fontWeight: 'bold', letterSpacing: 0.5 },
 });
