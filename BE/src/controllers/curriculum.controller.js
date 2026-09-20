@@ -101,7 +101,10 @@ export const getContents = catchAsync(async (req, res) => {
                 // Use stored library ID, or fall back to the current env var
                 bunnyLibraryId = item.bunnyLibraryId || defaultLibraryId;
             } else {
-                finalUrl = `/uploads/${actualKey}`;
+                // Only use /uploads/ fallback if fileUrl isn't already a valid CDN URL
+                if (!finalUrl || !finalUrl.startsWith('http')) {
+                    finalUrl = `/uploads/${actualKey}`;
+                }
             }
         }
 
@@ -274,7 +277,9 @@ export const getFreeContents = catchAsync(async (req, res) => {
                 bunnyVideoId = sanitizeBunnyVideoId(actualKey);
                 bunnyLibraryId = item.bunnyLibraryId || defaultLibraryId;
             } else {
-                finalUrl = `/uploads/${actualKey}`;
+                if (!finalUrl || !finalUrl.startsWith('http')) {
+                    finalUrl = `/uploads/${actualKey}`;
+                }
             }
         }
         
@@ -315,7 +320,9 @@ export const getSingleContentUrl = catchAsync(async (req, res) => {
             bunnyLibraryId = content.bunnyLibraryId || defaultLibraryId;
             hlsUrl = bunnyVideoId ? buildHlsUrl(bunnyVideoId) : null;
         } else {
-            finalUrl = `/uploads/${actualKey}`;
+            if (!finalUrl || !finalUrl.startsWith('http')) {
+                finalUrl = `/uploads/${actualKey}`;
+            }
         }
     }
     

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, Component, ErrorInfo, ReactNode } from 'react';
-import { View, FlatList, Modal, Linking, Text, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
+import { View, FlatList, Modal, Text, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/src/core/api/client';
@@ -9,6 +9,7 @@ import { ErrorState } from '@/src/components/ui/ErrorState';
 import { EmptyState } from '@/src/components/ui/EmptyState';
 import UnitSection from '@/src/features/curriculum/components/UnitSection';
 import VideoPlayer from '@/src/features/video/components/VideoPlayer';
+import PdfViewer from '@/src/features/pdf/components/PdfViewer';
 import DetailsBottomBar from '@/src/components/ui/DetailsBottomBar';
 import { Lock, BookOpen, X, ShieldCheck } from 'lucide-react-native';
 import { Content } from '@/src/types/curriculum.types';
@@ -48,6 +49,7 @@ export default function CourseContentScreen() {
   const navigation = useNavigation();
 
   const [activeVideo, setActiveVideo] = useState<{ contentId?: string; bunnyVideoId?: string; bunnyLibraryId?: string; hlsUrl?: string; title: string } | null>(null);
+  const [activePdf, setActivePdf] = useState<{ url: string; title: string } | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['contents', subjectId],
@@ -77,16 +79,7 @@ export default function CourseContentScreen() {
 
     if (content.type === 'pdf' || content.type === 'notes') {
       if (content.fileUrl) {
-        try {
-          const canOpen = await Linking.canOpenURL(content.fileUrl);
-          if (canOpen) {
-            await Linking.openURL(content.fileUrl);
-          } else {
-            showToast('Cannot open this file type on your device', 'error');
-          }
-        } catch {
-          showToast('Could not open the file. Try again.', 'error');
-        }
+        setActivePdf({ url: content.fileUrl, title: content.title });
       } else {
         showToast('File not available yet', 'info');
       }
@@ -196,6 +189,14 @@ export default function CourseContentScreen() {
           )}
         </View>
       </Modal>
+
+      {/* Full-screen PDF viewer modal */}
+      <PdfViewer
+        url={activePdf?.url || ''}
+        title={activePdf?.title || 'Document'}
+        visible={!!activePdf}
+        onClose={() => setActivePdf(null)}
+      />
     </View>
   );
 }
