@@ -88,7 +88,7 @@ export const getContents = catchAsync(async (req, res) => {
     const processedContent = contents.map(item => {
         const isUnlocked = item.isFree || hasPurchased; 
 
-        let finalUrl = null;
+        let finalUrl = isUnlocked ? (item.fileUrl || null) : null;
         let bunnyVideoId = null;
         let bunnyLibraryId = null;
         const actualKey = item.fileKey;
@@ -262,7 +262,7 @@ export const getFreeContents = catchAsync(async (req, res) => {
     const defaultLibraryId = process.env.BUNNY_STREAM_LIBRARY_ID;
         
     const processedContent = contents.map(item => {
-        let finalUrl = null;
+        let finalUrl = item.fileUrl || null;
         let bunnyVideoId = null;
         let bunnyLibraryId = null;
         const actualKey = item.fileKey;
@@ -301,7 +301,7 @@ export const getSingleContentUrl = catchAsync(async (req, res) => {
     if (!content) throw new ApiError(404, "Content not found");
     
     const defaultLibraryId = process.env.BUNNY_STREAM_LIBRARY_ID;
-    let finalUrl = null;
+    let finalUrl = content.fileUrl || null;
     let bunnyVideoId = null;
     let bunnyLibraryId = null;
     const actualKey = content.fileKey;
