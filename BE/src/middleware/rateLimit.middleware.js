@@ -1,4 +1,5 @@
 import rateLimit from "express-rate-limit";
+import User from "../models/user.models.js";
 
 // Helper: Render ke load balancer se real client IP nikalo
 // app.set('trust proxy', 1) already set in app.js — this extracts the real IP correctly
@@ -24,6 +25,20 @@ export const authLimiter = rateLimit({
     max: 10, // Login/Signup par max 10 attempts allowed
     // FIX: Use real client IP from Render's load balancer headers
     keyGenerator: getRealIp,
+    skip: async (req, res) => {
+        // Admin panel ke multiple failed logins par 1-hour block bypass karna
+        if (req.body && req.body.isAdminPanel && req.body.email) {
+            try {
+                const user = await User.findOne({ email: req.body.email });
+                if (user && user.accountType === 'Admin') {
+                    return true; // Rate limiting skip kar do
+                }
+            } catch (err) {
+                console.error("Rate limit skip error:", err);
+            }
+        }
+        return false; // Normal users ke liye rate limit apply karo
+    },
     message: { 
         status: false, 
         message: "Too many login attempts. For security reasons, please try again after an hour." 
