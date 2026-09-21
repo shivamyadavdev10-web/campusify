@@ -182,7 +182,7 @@ export const login = catchAsync(async (req, res) => {
     throw new ApiError(400, "Device ID is required for App login");
   }
 
-  const user = await User.findOne({ email }).select('+password');
+  const user = await User.findOne({ email }).select('+password +otpExpiry');
 
   if (!user || !(await user.comparePassword(password))) {
     throw new ApiError(400, "Invalid email or password");
@@ -225,6 +225,17 @@ export const login = catchAsync(async (req, res) => {
 
   // Interceptor: Unverified user
   if (!user.isVerified) {
+    // 🛑 COOLDOWN CHECK: Prevent spamming emails if requested within 1 minute
+    if (user.otpExpiry && user.otpExpiry > Date.now() + 9 * 60 * 1000) {
+      const waitSeconds = Math.ceil((user.otpExpiry - (Date.now() + 9 * 60 * 1000)) / 1000);
+      return res.status(403).json({
+        status: false,
+        isVerified: false, 
+        message: `Account not verified. Please check your email for the OTP or wait ${waitSeconds}s to resend.`,
+        email: user.email
+      });
+    }
+
     const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
     user.otp = newOtp;
     user.otpExpiry = Date.now() + 10 * 60 * 1000;
@@ -265,18 +276,23 @@ export const resendOTP = catchAsync(async (req, res) => {
   const { email } = req.body;
   if (!email) throw new ApiError(400, "Email is required");
 
+  const user = await User.findOne({ email, isVerified: false }).select('+otpExpiry');
+  if (!user) {
+    throw new ApiError(400, "User not found or is already verified. Please login.");
+  }
+
+  // 🛑 COOLDOWN CHECK: Prevent spamming emails if requested within 1 minute
+  if (user.otpExpiry && user.otpExpiry > Date.now() + 9 * 60 * 1000) {
+    const waitSeconds = Math.ceil((user.otpExpiry - (Date.now() + 9 * 60 * 1000)) / 1000);
+    throw new ApiError(429, `Please wait ${waitSeconds} seconds before requesting a new OTP.`);
+  }
+
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const otpExpiry = Date.now() + 10 * 60 * 1000;
 
-  // ⚡ OPTIMIZED: Pura document fetch karne ke bajay seedha DB me value set kar di.
-  const updated = await User.updateOne(
-    { email, isVerified: false }, 
-    { $set: { otp, otpExpiry } }
-  );
-
-  if (updated.matchedCount === 0) {
-    throw new ApiError(400, "User not found or is already verified. Please login.");
-  }
+  user.otp = otp;
+  user.otpExpiry = otpExpiry;
+  await user.save();
 
   console.log("🚀 RESEND OTP: ", otp);
   sendVerificationEmail(email, otp, "resend"); // Background call
@@ -290,18 +306,23 @@ export const resendOTP = catchAsync(async (req, res) => {
 export const forgotPassword = catchAsync(async (req, res) => {
   const { email } = req.body;
 
+  const user = await User.findOne({ email, isVerified: true }).select('+otpExpiry');
+  if (!user) {
+    throw new ApiError(400, "User not found or account is not verified.");
+  }
+
+  // 🛑 COOLDOWN CHECK: Prevent spamming emails if requested within 1 minute
+  if (user.otpExpiry && user.otpExpiry > Date.now() + 9 * 60 * 1000) {
+    const waitSeconds = Math.ceil((user.otpExpiry - (Date.now() + 9 * 60 * 1000)) / 1000);
+    throw new ApiError(429, `Please wait ${waitSeconds} seconds before requesting a new OTP.`);
+  }
+
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const otpExpiry = Date.now() + 10 * 60 * 1000;
   
-  // ⚡ OPTIMIZED: Direct update
-  const updated = await User.updateOne(
-    { email, isVerified: true }, // User verified hona chahiye forget pass ke liye
-    { $set: { otp, otpExpiry } }
-  );
-
-  if (updated.matchedCount === 0) {
-    throw new ApiError(400, "User not found or account is not verified.");
-  }
+  user.otp = otp;
+  user.otpExpiry = otpExpiry;
+  await user.save();
 
   console.log("🚀 FORGOT PASSWORD OTP: ", otp);
   sendVerificationEmail(email, otp, "forgotPassword"); 
