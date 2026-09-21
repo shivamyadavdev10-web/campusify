@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, Component, ErrorInfo, ReactNode } from 'react';
-import { View, FlatList, Modal, Text, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
+import { View, FlatList, Modal, Text, TouchableOpacity, StyleSheet, StatusBar, ScrollView } from 'react-native';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/src/core/api/client';
@@ -11,7 +11,7 @@ import UnitSection from '@/src/features/curriculum/components/UnitSection';
 import VideoPlayer from '@/src/features/video/components/VideoPlayer';
 import PdfViewer from '@/src/features/pdf/components/PdfViewer';
 import DetailsBottomBar from '@/src/components/ui/DetailsBottomBar';
-import { Lock, BookOpen, X, ShieldCheck } from 'lucide-react-native';
+import { Lock, BookOpen, X, ShieldCheck, FileText, ChevronLeft } from 'lucide-react-native';
 import { Content } from '@/src/types/curriculum.types';
 
 // ErrorBoundary to prevent video player crashes from taking down the app
@@ -48,6 +48,9 @@ export default function CourseContentScreen() {
   const { showToast } = useUIStore();
   const navigation = useNavigation();
 
+  const [activeTab, setActiveTab] = useState<'lectures' | 'materials'>('lectures');
+  const [selectedMaterialCategory, setSelectedMaterialCategory] = useState<string | null>(null);
+
   const [activeVideo, setActiveVideo] = useState<{ contentId?: string; bunnyVideoId?: string; bunnyLibraryId?: string; hlsUrl?: string; title: string } | null>(null);
   const [activePdf, setActivePdf] = useState<{ url: string; title: string } | null>(null);
 
@@ -59,16 +62,45 @@ export default function CourseContentScreen() {
 
   const { contents = [], isSemesterPurchased = false } = data || {};
 
-  // Group contents by unit, preserving natural order
-  const units = useMemo(() => {
+  const lectureContents = useMemo(() => {
+    return (contents as Content[]).filter(c => c.type === 'video');
+  }, [contents]);
+
+  const materialContents = useMemo(() => {
+    return (contents as Content[]).filter(c => c.type === 'pdf' || c.type === 'notes');
+  }, [contents]);
+
+  // Group lectures by unit
+  const lectureUnits = useMemo(() => {
     const unitMap = new Map<string, Content[]>();
-    (contents as Content[]).forEach((item) => {
+    lectureContents.forEach((item) => {
       const unitKey = item.unit || 'Other';
       if (!unitMap.has(unitKey)) unitMap.set(unitKey, []);
       unitMap.get(unitKey)!.push(item);
     });
     return Array.from(unitMap.entries()).map(([unitName, items]) => ({ unitName, contents: items }));
-  }, [contents]);
+  }, [lectureContents]);
+
+  // Group materials by selected category and unit
+  const materialUnits = useMemo(() => {
+    if (!selectedMaterialCategory) return [];
+    
+    const filteredMaterials = materialContents.filter(c => c.category === selectedMaterialCategory);
+    const unitMap = new Map<string, Content[]>();
+    filteredMaterials.forEach((item) => {
+      const unitKey = item.unit || 'Other';
+      if (!unitMap.has(unitKey)) unitMap.set(unitKey, []);
+      unitMap.get(unitKey)!.push(item);
+    });
+    return Array.from(unitMap.entries()).map(([unitName, items]) => ({ unitName, contents: items }));
+  }, [materialContents, selectedMaterialCategory]);
+
+  const materialCategories = [
+    { id: 'PYQ', label: 'PYQ', icon: <FileText color="#4f46e5" size={24} /> },
+    { id: 'VVIMP', label: 'VVIMP', icon: <ShieldCheck color="#e11d48" size={24} /> },
+    { id: 'PPT Notes', label: 'PPT Notes', icon: <BookOpen color="#059669" size={24} /> },
+    { id: 'Notes', label: 'Notes', icon: <FileText color="#d97706" size={24} /> },
+  ];
 
   const handleContentPress = useCallback(async (content: Content) => {
     // Gate: locked content that isn't free and semester isn't purchased
@@ -121,6 +153,22 @@ export default function CourseContentScreen() {
     <View style={styles.screen}>
       <StatusBar barStyle="dark-content" />
 
+      {/* Tabs */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === 'lectures' && styles.tabButtonActive]}
+          onPress={() => { setActiveTab('lectures'); setSelectedMaterialCategory(null); }}
+        >
+          <Text style={[styles.tabText, activeTab === 'lectures' && styles.tabTextActive]}>Lectures</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === 'materials' && styles.tabButtonActive]}
+          onPress={() => setActiveTab('materials')}
+        >
+          <Text style={[styles.tabText, activeTab === 'materials' && styles.tabTextActive]}>Materials</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Purchase banner for non-purchased semesters */}
       {!isSemesterPurchased && (
         <TouchableOpacity
@@ -137,29 +185,85 @@ export default function CourseContentScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Unit list */}
-      <FlatList
-        data={units}
-        keyExtractor={item => item.unitName}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <EmptyState
-            icon={<BookOpen color="#4f46e5" size={48} />}
-            title="No Content Yet"
-            description="Content for this subject will appear here once uploaded"
-          />
-        }
-        renderItem={({ item, index }) => (
-          <UnitSection
-            unitName={item.unitName}
-            contents={item.contents}
-            isSemesterPurchased={isSemesterPurchased}
-            onContentPress={handleContentPress}
-            initialExpanded={index === 0}
-          />
-        )}
-      />
+      {/* Content Area */}
+      {activeTab === 'lectures' ? (
+        <FlatList
+          data={lectureUnits}
+          keyExtractor={item => item.unitName}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <EmptyState
+              icon={<BookOpen color="#4f46e5" size={48} />}
+              title="No Lectures Yet"
+              description="Lectures for this subject will appear here once uploaded"
+            />
+          }
+          renderItem={({ item, index }) => (
+            <UnitSection
+              unitName={item.unitName}
+              contents={item.contents}
+              isSemesterPurchased={isSemesterPurchased}
+              onContentPress={handleContentPress}
+              initialExpanded={index === 0}
+            />
+          )}
+        />
+      ) : (
+        /* Materials View */
+        <View style={{ flex: 1 }}>
+          {!selectedMaterialCategory ? (
+            <ScrollView contentContainerStyle={styles.materialsGrid}>
+              {materialCategories.map((cat) => (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={styles.categoryCard}
+                  onPress={() => setSelectedMaterialCategory(cat.id)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.categoryIconWrap}>
+                    {cat.icon}
+                  </View>
+                  <Text style={styles.categoryTitle}>{cat.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={{ flex: 1 }}>
+              <TouchableOpacity 
+                style={styles.backButton} 
+                onPress={() => setSelectedMaterialCategory(null)}
+              >
+                <ChevronLeft color="#4f46e5" size={20} />
+                <Text style={styles.backButtonText}>Back to Materials</Text>
+              </TouchableOpacity>
+
+              <FlatList
+                data={materialUnits}
+                keyExtractor={item => item.unitName}
+                contentContainerStyle={styles.listContainer}
+                showsVerticalScrollIndicator={false}
+                ListEmptyComponent={
+                  <EmptyState
+                    icon={<FileText color="#4f46e5" size={48} />}
+                    title={`No ${selectedMaterialCategory} Yet`}
+                    description={`Content for ${selectedMaterialCategory} will appear here`}
+                  />
+                }
+                renderItem={({ item, index }) => (
+                  <UnitSection
+                    unitName={item.unitName}
+                    contents={item.contents}
+                    isSemesterPurchased={isSemesterPurchased}
+                    onContentPress={handleContentPress}
+                    initialExpanded={index === 0}
+                  />
+                )}
+              />
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Sticky Bottom CTA — Get More Details + WhatsApp */}
       <DetailsBottomBar detailsUrl={detailsUrl || 'https://campusifyplus.in/online-classes/'} />
@@ -223,6 +327,32 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
+  tabContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+    gap: 12,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#e0e7ff',
+    borderRadius: 12,
+  },
+  tabButtonActive: {
+    backgroundColor: '#4f46e5',
+  },
+  tabText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#4f46e5',
+  },
+  tabTextActive: {
+    color: '#ffffff',
+  },
   purchaseBanner: {
     marginHorizontal: 16,
     marginTop: 12,
@@ -256,6 +386,55 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 80,
     gap: 12,
+  },
+  materialsGrid: {
+    padding: 16,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    paddingBottom: 80,
+  },
+  categoryCard: {
+    width: '47%',
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.06)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  categoryIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: 'rgba(79, 70, 229, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  categoryTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1e293b',
+    textAlign: 'center',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    gap: 4,
+  },
+  backButtonText: {
+    color: '#4f46e5',
+    fontSize: 15,
+    fontWeight: '600',
   },
   // ── Video Modal ──
   modalBg: {
