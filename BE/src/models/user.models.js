@@ -75,6 +75,10 @@ const userSchema = new mongoose.Schema({
     banReason: { type: String },
     banUntil: { type: Date, default: null },
 
+    // Push Notifications
+    pushToken: { type: String, default: null },
+    lastNotificationReadAt: { type: Date, default: Date.now },
+
     cooldownUntil: { type: Date, default: null }, 
     refreshToken: { type: String, select: false }
 }, { timestamps: true, optimisticConcurrency: true });

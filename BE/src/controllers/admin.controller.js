@@ -496,7 +496,21 @@ export const uploadBanner = catchAsync(async (req, res) => {
     
     if (req.file) {
         console.log(`\n📥 Received banner file: ${req.file.originalname}`);
-        imageUrl = req.file.filename;
+        const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/_+/g, '_');
+        const timestamp = Date.now();
+        const storagePath = `banners/${timestamp}_${safeName}`;
+        
+        try {
+            imageUrl = await uploadToBunnyStorage(req.file.path, storagePath);
+        } catch (error) {
+            if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+            throw new ApiError(500, "Failed to upload banner to CDN");
+        }
+        
+        // Clean up temp file
+        if (fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
     }
 
     if (!imageUrl) {

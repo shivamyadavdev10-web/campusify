@@ -17,12 +17,12 @@ import {
     forgotPasswordSchema,
     resetPasswordSchema 
 } from "../validations/auth.validation.js";
-
+import { isLoggedIn, isAdmin } from "../middleware/isLoggedIn.middleware.js";
 
 const router = express.Router();
 
 router.post("/register", authLimiter, validateRequest(registerSchema), registerUser);
-router.post("/create-super-admin", createSuperAdmin);
+router.post("/create-super-admin", isLoggedIn, isAdmin, createSuperAdmin);
 router.post("/verify-otp", authLimiter, verifyOTP);
 router.post("/resend-otp", authLimiter, resendOTP);
 router.post("/login", authLimiter, validateRequest(loginSchema), login);

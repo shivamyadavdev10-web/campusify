@@ -28,10 +28,34 @@ describe("Auth Routes (/api/auth)", () => {
     expect(response.body.message).toBe("Registered successfully, please verify email.");
   });
   it("POST /create-super-admin - Should create a super admin", async () => {
+    // First create an existing super admin and log in
+    const existingAdminEmail = `existingadmin${Date.now()}@example.com`;
+    const existingAdminPhone = `98${Math.floor(10000000 + Math.random() * 90000000)}`;
+    await User.create({
+      firstName: "Existing",
+      lastName: "Admin",
+      phoneNo: existingAdminPhone,
+      email: existingAdminEmail,
+      password: "ExistingPassword123!",
+      accountType: "Admin",
+      isVerified: true
+    });
+
+    const loginRes = await request(app)
+      .post("/api/auth/login")
+      .send({
+        email: existingAdminEmail,
+        password: "ExistingPassword123!",
+        platform: "web"
+      });
+
+    const cookies = loginRes.headers['set-cookie'];
+
     const uniqueEmail = `admin${Date.now()}@example.com`;
     const uniquePhone = `98${Math.floor(10000000 + Math.random() * 90000000)}`;
     const response = await request(app)
       .post("/api/auth/create-super-admin")
+      .set('Cookie', cookies)
       .send({
         firstName: "Super",
         lastName: "Admin",

@@ -75,6 +75,33 @@ interface AuthState {
 
 let isLoggingOut = false;
 
+const isTokenExpired = (token: string | null) => {
+  if (!token) return true;
+  try {
+    const base64Url = token.split('.')[1];
+    if (!base64Url) return true;
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+    let strClear = base64.replace(/=+$/, '');
+    let output = '';
+    for (
+      let bc = 0, bs = 0, buffer, i = 0;
+      (buffer = strClear.charAt(i++));
+      ~buffer && ((bs = bc % 4 ? bs * 64 + buffer : buffer), bc++ % 4) ? (output += String.fromCharCode(255 & (bs >> ((-2 * bc) & 6)))) : 0
+    ) {
+      buffer = chars.indexOf(buffer);
+    }
+    const match = output.match(/"exp"\s*:\s*(\d+)/);
+    if (match && match[1]) {
+      const exp = parseInt(match[1], 10);
+      return exp * 1000 < Date.now();
+    }
+    return false;
+  } catch {
+    return false;
+  }
+};
+
 // ==========================================
 // Auth Store
 // ==========================================
@@ -162,16 +189,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const token = await SecureStore.getItemAsync(KEYS.ACCESS_TOKEN);
       const refreshToken = await SecureStore.getItemAsync(KEYS.REFRESH_TOKEN);
 
-      if (token) {
-        // Token exists — let it be used. If expired, the interceptor will auto-refresh.
-        set({ token, isAuthenticated: true, isLoading: false });
-      } else if (refreshToken) {
-        // Access token missing but refresh token exists — user was logged in.
-        // Set authenticated so the app goes to home, interceptor will get new access token on first API call.
-        set({ token: 'pending_refresh', isAuthenticated: true, isLoading: false });
-      } else {
-        // No tokens at all — user needs to login
+      const isAccessExpired = isTokenExpired(token);
+      const isRefreshExpired = isTokenExpired(refreshToken);
+
+      if (isAccessExpired && isRefreshExpired) {
+        await SecureStore.deleteItemAsync(KEYS.ACCESS_TOKEN).catch(() => {});
+        await SecureStore.deleteItemAsync(KEYS.REFRESH_TOKEN).catch(() => {});
         set({ token: null, isAuthenticated: false, isLoading: false });
+        return;
+      }
+      
+      if (!isAccessExpired && token) {
+        set({ token, isAuthenticated: true, isLoading: false });
+      } else {
+        set({ token: 'pending_refresh', isAuthenticated: true, isLoading: false });
       }
     } catch {
       set({ token: null, isAuthenticated: false, isLoading: false });

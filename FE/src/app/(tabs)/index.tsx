@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Platform, Modal, ActivityIndicator, Linking, Dimensions } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, Platform, Modal, ActivityIndicator, Linking, Dimensions, Image } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/src/core/api/client';
 import { STALE_TIMES } from '@/src/core/api/queryClient';
@@ -8,6 +8,7 @@ import { ErrorState } from '@/src/components/ui/ErrorState';
 import { useRouter } from 'expo-router';
 import { Search, Filter, Megaphone, Layers, Flame, PlayCircle, GraduationCap, ChevronRight, Star, Clock, Video } from 'lucide-react-native';
 import { BranchSelectModal } from '@/src/components/ui/BranchSelectModal';
+import { NotificationBell } from '@/src/components/ui/NotificationBell';
 import VideoPlayer from '@/src/features/video/components/VideoPlayer';
 import { useUIStore } from '@/src/core/stores/ui.store';
 
@@ -174,18 +175,24 @@ export default function HomeScreen() {
                           }
                         }}
                       >
-                        {banner.subtitle && (
-                          <View className="bg-[#5c95fa] self-start px-3 py-1.5 rounded-full flex-row items-center mb-3">
-                            <Megaphone color="#ffffff" size={14} />
-                            <Text className="text-white text-[11px] font-semibold ml-2">{banner.subtitle}</Text>
-                          </View>
+                        {banner.imageUrl ? (
+                          <Image source={{ uri: banner.imageUrl }} style={{ width: '100%', height: 160, borderRadius: 12 }} resizeMode="cover" />
+                        ) : (
+                          <>
+                            {banner.subtitle && (
+                              <View className="bg-[#5c95fa] self-start px-3 py-1.5 rounded-full flex-row items-center mb-3">
+                                <Megaphone color="#ffffff" size={14} />
+                                <Text className="text-white text-[11px] font-semibold ml-2">{banner.subtitle}</Text>
+                              </View>
+                            )}
+                            <Text className="text-white text-[22px] leading-tight font-bold mb-4 pr-6">
+                              {banner.title || 'Explore Our Courses'}
+                            </Text>
+                            <View className="bg-white self-start px-5 py-2.5 rounded-xl">
+                              <Text className="text-[#4182f9] font-bold text-sm">Explore Courses</Text>
+                            </View>
+                          </>
                         )}
-                        <Text className="text-white text-[22px] leading-tight font-bold mb-4 pr-6">
-                          {banner.title || 'Explore Our Courses'}
-                        </Text>
-                        <View className="bg-white self-start px-5 py-2.5 rounded-xl">
-                          <Text className="text-[#4182f9] font-bold text-sm">Explore Courses</Text>
-                        </View>
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
@@ -560,3 +567,5 @@ export default function HomeScreen() {
     </>
   );
 }
+
+

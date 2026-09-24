@@ -9,6 +9,8 @@ import { View, Text, ActivityIndicator, BackHandler, Alert, Platform } from 'rea
 import ToastRenderer from '@/src/components/ui/ToastRenderer';
 import { useNetInfo } from '@react-native-community/netinfo';
 import * as Sentry from '@sentry/react-native';
+import { usePushNotifications } from '@/src/hooks/usePushNotifications';
+import { useAppState } from '@/src/hooks/useAppState';
 import '../../global.css';
 
 Sentry.init({
@@ -28,6 +30,14 @@ function RootLayout() {
   const router = useRouter();
   const netInfo = useNetInfo();
   const isOffline = netInfo.type !== 'unknown' && netInfo.isInternetReachable === false;
+  
+  // Initialize Push Notifications
+  usePushNotifications();
+
+  // Run checkAuth whenever the app comes to foreground
+  useAppState(() => {
+    checkAuth();
+  });
 
   useEffect(() => {
     checkAuth();

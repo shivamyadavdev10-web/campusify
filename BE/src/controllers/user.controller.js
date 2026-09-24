@@ -89,3 +89,61 @@ export const changePassword = catchAsync(async (req, res) => {
         message: "Password updated successfully"
     });
 });
+
+// ==========================================
+// 4. SAVE EXPO PUSH TOKEN
+// ==========================================
+export const savePushToken = catchAsync(async (req, res) => {
+    const { pushToken } = req.body;
+    
+    if (!pushToken) {
+        throw new ApiError(400, "pushToken is required");
+    }
+
+    await User.findByIdAndUpdate(req.user._id, { pushToken });
+
+    res.status(200).json({
+        status: true,
+        message: "Push token saved successfully"
+    });
+});
+
+// ==========================================
+// 5. GET MY NOTIFICATIONS
+// ==========================================
+import Notification from "../models/notification.models.js";
+
+export const getNotifications = catchAsync(async (req, res) => {
+    const user = await User.findById(req.user._id).select("lastNotificationReadAt");
+    
+    // In a real app, you might want to filter by targetAudience. For now, fetch all active.
+    const notifications = await Notification.find({ isActive: true })
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .lean();
+
+    // Calculate unread count
+    const unreadCount = notifications.filter(
+        (n) => new Date(n.createdAt) > new Date(user.lastNotificationReadAt)
+    ).length;
+
+    res.status(200).json({
+        status: true,
+        data: {
+            notifications,
+            unreadCount
+        }
+    });
+});
+
+// ==========================================
+// 6. MARK NOTIFICATIONS AS READ
+// ==========================================
+export const markNotificationsRead = catchAsync(async (req, res) => {
+    await User.findByIdAndUpdate(req.user._id, { lastNotificationReadAt: Date.now() });
+
+    res.status(200).json({
+        status: true,
+        message: "Notifications marked as read"
+    });
+});

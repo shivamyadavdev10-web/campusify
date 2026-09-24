@@ -59,4 +59,10 @@ router.post("/banner", upload.single("file"), uploadBanner); // ✅ Banner Uploa
 router.patch("/banner/:bannerId/toggle", toggleBanner); // ✅ Toggle Banner Active/Inactive
 router.delete("/banner/:bannerId", deleteBanner); // ✅ Delete Banner
 
+// ==========================================
+// NOTIFICATIONS
+// ==========================================
+import { createNotification } from "../controllers/notification.controller.js";
+router.post("/notifications", createNotification);
+
 export default router;
