@@ -3,8 +3,8 @@ import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import { apiClient } from '../api/client'; // Assuming this is the axios instance
-import { useAuthStore } from '../store/auth.store';
+import { apiClient } from '../core/api/client'; // Assuming this is the axios instance
+import { useAuthStore } from '../core/stores/auth.store';
 
 // Set how notifications are handled when the app is in the foreground
 Notifications.setNotificationHandler({

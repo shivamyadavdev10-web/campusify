@@ -104,7 +104,6 @@ export default function VideoPlayer({ bunnyVideoId, hlsUrl, isActive, onClose }:
     p.loop = false;
     // 🔊 Audio Fix: Force full volume & proper audio session mode
     p.volume = 1.0;
-    p.audioMixingMode = 'auto';
     p.play();
   });
 
