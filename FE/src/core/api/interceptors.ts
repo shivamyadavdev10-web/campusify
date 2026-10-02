@@ -40,12 +40,6 @@ export const setupInterceptors = (axiosInstance: AxiosInstance) => {
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
-
-        // Send refresh token so backend can auto-rotate tokens silently when expired
-        const refreshToken = await SecureStore.getItemAsync(KEYS.REFRESH_TOKEN).catch(() => null);
-        if (refreshToken) {
-          config.headers['x-refresh-token'] = refreshToken;
-        }
       } catch (error) {
         // Non-fatal: proceed without tokens
       }
@@ -60,18 +54,6 @@ export const setupInterceptors = (axiosInstance: AxiosInstance) => {
   // ==========================================
   axiosInstance.interceptors.response.use(
     async (response: AxiosResponse) => {
-      // If backend rotated tokens, update our SecureStore silently
-      const newAccessToken = response.headers['x-new-access-token'];
-      const newRefreshToken = response.headers['x-new-refresh-token'];
-
-      if (newAccessToken) {
-        await SecureStore.setItemAsync(KEYS.ACCESS_TOKEN, newAccessToken).catch(() => {});
-        getAuthStore().setState({ token: newAccessToken });
-      }
-      if (newRefreshToken) {
-        await SecureStore.setItemAsync(KEYS.REFRESH_TOKEN, newRefreshToken).catch(() => {});
-      }
-
       return response;
     },
     async (error: AxiosError) => {
@@ -114,28 +96,35 @@ export const setupInterceptors = (axiosInstance: AxiosInstance) => {
         isRefreshing = true;
 
         try {
-          // Retry the original request — backend will auto-refresh via x-refresh-token header
+          // Explicitly call the dedicated refresh endpoint
           const refreshToken = await SecureStore.getItemAsync(KEYS.REFRESH_TOKEN).catch(() => null);
           if (!refreshToken) {
-            // No refresh token = can't recover, logout
             throw new Error('No refresh token');
           }
 
-          // Make a lightweight call to trigger backend auto-refresh
-          // The backend isLoggedIn middleware will generate new tokens
-          originalRequest.headers['x-refresh-token'] = refreshToken;
-          // Remove expired access token so backend uses refresh token path
-          delete originalRequest.headers.Authorization;
+          // Call refresh endpoint directly using a clean config to bypass loops
+          const refreshResponse = await axiosInstance.post('/auth/refresh', {}, {
+            headers: { 'x-refresh-token': refreshToken }
+          });
 
-          const retryResponse = await axiosInstance.request(originalRequest);
+          const { accessToken, refreshToken: newRefreshToken } = refreshResponse.data;
 
-          // If we got here, backend refreshed tokens (check headers)
-          const newToken = retryResponse.headers?.['x-new-access-token'] || authStore.getState().token;
-          if (newToken) {
-            processQueue(null, newToken);
+          if (accessToken) {
+            await SecureStore.setItemAsync(KEYS.ACCESS_TOKEN, accessToken);
+            authStore.setState({ token: accessToken });
+            
+            if (newRefreshToken) {
+              await SecureStore.setItemAsync(KEYS.REFRESH_TOKEN, newRefreshToken);
+            }
+
+            processQueue(null, accessToken);
+
+            // Retry the original request with the new access token
+            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+            return axiosInstance.request(originalRequest);
+          } else {
+             throw new Error('No access token in refresh response');
           }
-
-          return retryResponse;
         } catch (refreshError) {
           // Refresh also failed — session is truly dead, logout
           processQueue(refreshError, null);

@@ -13,7 +13,7 @@ import { buildHlsUrl, buildMp4Url, sanitizeBunnyVideoId } from "../utils/bunnyUr
 
 // 🏫 Step 1: App khulte hi Branches dikhana
 export const getBranches = catchAsync(async (req, res) => {
-    const branches = await Branch.find({ isActive: true });
+    const branches = await Branch.find({ isActive: true }).lean();
     res.status(200).json({ status: true, branches });
 });
 
@@ -24,7 +24,7 @@ export const getSemesters = catchAsync(async (req, res) => {
     // Fetch branch details for detailsUrl
     const branch = await Branch.findById(branchId).select('name shortName detailsUrl');
     
-    const semesters = await Semester.find({ branchId, isPublished: true }).sort({ semNumber: 1 });
+    const semesters = await Semester.find({ branchId, isPublished: true }).sort({ semNumber: 1 }).lean();
     
     res.status(200).json({ 
         status: true, 
@@ -45,7 +45,7 @@ export const getSubjects = catchAsync(async (req, res) => {
     const semester = await Semester.findById(semesterId)
         .populate({ path: 'branchId', select: 'name shortName detailsUrl' });
     
-    const subjects = await Subject.find({ semesterId, isActive: true }).sort({ orderSequence: 1 });
+    const subjects = await Subject.find({ semesterId, isActive: true }).sort({ orderSequence: 1 }).lean();
     
     // Determine the best detailsUrl: semester-level override > branch-level > default
     const detailsUrl = semester?.detailsUrl 
@@ -80,7 +80,7 @@ export const getContents = catchAsync(async (req, res) => {
     // Fetch contents
     const contents = await Content.find({ subjectId })
         .select('+fileKey +bunnyLibraryId') // Include both sensitive fields for processing
-        .sort({ orderSequence: 1, createdAt: 1 });
+        .sort({ orderSequence: 1, createdAt: 1 }).lean();
 
     // Default library ID fallback for content that was created before bunnyLibraryId field existed
     const defaultLibraryId = process.env.BUNNY_STREAM_LIBRARY_ID;
@@ -143,7 +143,7 @@ export const getDefaultSearchResults = catchAsync(async (req, res) => {
         path: 'branchId',
         select: 'name shortName detailsUrl'
     })
-    .sort({ semNumber: -1, createdAt: -1 }); // 5th sem first, then 3rd
+    .sort({ semNumber: -1, createdAt: -1 }).lean(); // 5th sem first, then 3rd
 
     // Group by semester number
     const grouped = {};
@@ -202,13 +202,7 @@ export const searchCurriculum = catchAsync(async (req, res) => {
     } else {
         // SCENARIO 2: "All Branches" selected
         // Pehle active branches me dhoondho
-        const matchingBranches = await Branch.find({
-            isActive: true,
-            $or: [
-                { name: searchRegex },
-                { shortName: searchRegex }
-            ]
-        }).select('_id');
+        const matchingBranches = await Branch.find({ isActive: true, $or: [ { name: searchRegex }, { shortName: searchRegex } ] }).select('_id').lean();
         
         const branchIds = matchingBranches.map(b => b._id);
 
@@ -225,7 +219,7 @@ export const searchCurriculum = catchAsync(async (req, res) => {
         path: 'branchId',
         select: 'name shortName' // Frontend cards ke liye
     })
-    .sort({ semNumber: 1 });
+    .sort({ semNumber: 1 }).lean();
 
     res.status(200).json({ 
         status: true, 
@@ -246,7 +240,7 @@ export const getTrendingCourses = catchAsync(async (req, res) => {
             select: 'name shortName'
         })
         .sort({ createdAt: -1 })
-        .limit(6);
+        .limit(6).lean();
         
     res.status(200).json({ status: true, courses });
 });
@@ -260,7 +254,7 @@ export const getFreeContents = catchAsync(async (req, res) => {
             select: 'name semesterId'
         })
         .sort({ createdAt: -1 })
-        .limit(10);
+        .limit(10).lean();
 
     const defaultLibraryId = process.env.BUNNY_STREAM_LIBRARY_ID;
         
@@ -346,6 +340,6 @@ export const getFreeStreamUrl = catchAsync(async (req, res) => {
 // 🖼️ Fetch All Active Banners for Home Screen Carousel
 export const getBanner = catchAsync(async (req, res) => {
     // Return all active banners sorted by newest first
-    const banners = await Banner.find({ isActive: true }).sort({ createdAt: -1 });
+    const banners = await Banner.find({ isActive: true }).sort({ createdAt: -1 }).lean();
     res.status(200).json({ status: true, banners });
 });

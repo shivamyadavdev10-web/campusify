@@ -1,53 +1,66 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, Modal, ActivityIndicator, StyleSheet, StatusBar, Platform } from 'react-native';
-import { WebView } from 'react-native-webview';
-import { X, RefreshCw, FileText, AlertTriangle } from 'lucide-react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, StatusBar, Platform, Animated, Dimensions } from 'react-native';
+import Pdf from 'react-native-pdf';
+import { X, FileText, AlertTriangle, RefreshCw } from 'lucide-react-native';
+import { useSecurePdf } from '../../../hooks/useSecurePdf';
+
+const { width } = Dimensions.get('window');
 
 interface PdfViewerProps {
-  /** Full HTTPS URL of the PDF file */
   url: string;
-  /** Title to show in the bottom bar */
   title: string;
-  /** Whether the modal is visible */
   visible: boolean;
-  /** Callback to close the modal */
   onClose: () => void;
 }
 
 export default function PdfViewer({ url, title, visible, onClose }: PdfViewerProps) {
+  // Use our new highly secure, persistent downloader
+  const { localUri, progress, error: downloadError } = useSecurePdf(visible ? url : '');
+  
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const webViewRef = useRef<WebView>(null);
+  
+  // Combine custom download error and native PDF rendering error
+  const showRetry = hasError || downloadError;
 
-  // Google Docs Viewer renders PDFs inside an iframe — works on Android & iOS
-  const viewerUrl = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(url)}`;
+  // Pulse animation for skeleton
+  const [pulseAnim] = useState(new Animated.Value(0.3));
 
-  const handleLoadEnd = useCallback(() => {
-    setIsLoading(false);
-  }, []);
+  const startSkeletonPulse = useCallback(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 0.7,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.3,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [pulseAnim]);
 
-  const handleError = useCallback(() => {
-    setIsLoading(false);
-    setHasError(true);
-  }, []);
-
-  const handleRetry = useCallback(() => {
-    setHasError(false);
-    setIsLoading(true);
-    webViewRef.current?.reload();
-  }, []);
-
-  // Reset state when modal opens/closes
   const handleModalShow = useCallback(() => {
     setIsLoading(true);
     setHasError(false);
-  }, []);
+    startSkeletonPulse();
+  }, [startSkeletonPulse]);
+
+  const handleRetry = () => {
+    setHasError(false);
+    setIsLoading(true);
+    startSkeletonPulse();
+    // In a real scenario, you might want to trigger a re-download in the hook here
+  };
 
   return (
     <Modal
       visible={visible}
       transparent={false}
-      animationType="fade"
+      animationType="slide"
       statusBarTranslucent
       onRequestClose={onClose}
       onShow={handleModalShow}
@@ -55,7 +68,7 @@ export default function PdfViewer({ url, title, visible, onClose }: PdfViewerPro
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#1e1e2e" />
 
-        {/* ── Top Bar ─────────────────────────────────────────────── */}
+        {/* ── Top Bar (Premium Glass/Dark Look) ── */}
         <View style={styles.topBar}>
           <View style={styles.topBarLeft}>
             <View style={styles.fileIconWrap}>
@@ -75,10 +88,8 @@ export default function PdfViewer({ url, title, visible, onClose }: PdfViewerPro
           </TouchableOpacity>
         </View>
 
-        {/* ── WebView (PDF Viewer) ────────────────────────────────── */}
-        <View style={styles.webViewContainer}>
-          {hasError ? (
-            /* Error State */
+        <View style={styles.contentContainer}>
+          {showRetry ? (
             <View style={styles.errorContainer}>
               <AlertTriangle color="#f87171" size={48} />
               <Text style={styles.errorTitle}>Unable to load PDF</Text>
@@ -91,39 +102,52 @@ export default function PdfViewer({ url, title, visible, onClose }: PdfViewerPro
               </TouchableOpacity>
             </View>
           ) : (
-            <WebView
-              ref={webViewRef}
-              source={{ uri: viewerUrl }}
-              style={styles.webView}
-              onLoadEnd={handleLoadEnd}
-              onError={handleError}
-              onHttpError={handleError}
-              startInLoadingState={false}
-              javaScriptEnabled={true}
-              domStorageEnabled={true}
-              scalesPageToFit={true}
-              allowsFullscreenVideo={false}
-              setSupportMultipleWindows={false}
-              // Prevent navigation away from the viewer
-              onShouldStartLoadWithRequest={(request) => {
-                // Allow Google Docs Viewer URLs, block everything else
-                if (
-                  request.url.includes('docs.google.com') ||
-                  request.url.includes('accounts.google.com') ||
-                  request.url === 'about:blank'
-                ) {
-                  return true;
-                }
-                return false;
-              }}
-            />
+            // Only render the PDF component once we have a secure local URI
+            localUri ? (
+              <Pdf
+                source={{ uri: localUri }}
+                trustAllCerts={false}
+                onLoadComplete={(numberOfPages, filePath) => {
+                  setIsLoading(false);
+                }}
+                onError={(error) => {
+                  console.log('PDF Render Error:', error);
+                  setIsLoading(false);
+                  setHasError(true);
+                }}
+                style={styles.pdf}
+              />
+            ) : null
           )}
 
-          {/* Loading Overlay */}
-          {isLoading && !hasError && (
-            <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color="#6366f1" />
-              <Text style={styles.loadingText}>Loading PDF...</Text>
+          {/* Premium Skeleton Loader overlay */}
+          {(isLoading || !localUri) && !showRetry && (
+            <View style={styles.skeletonContainer}>
+              {/* Fake PDF Header */}
+              <Animated.View style={[styles.skeletonHeader, { opacity: pulseAnim }]} />
+              
+              {/* Fake PDF Lines */}
+              {[1, 2, 3, 4, 5, 6, 7].map((item) => (
+                <Animated.View 
+                  key={item} 
+                  style={[
+                    styles.skeletonLine, 
+                    { 
+                      opacity: pulseAnim, 
+                      width: item % 2 === 0 ? '90%' : '100%' 
+                    }
+                  ]} 
+                />
+              ))}
+
+              <View style={styles.progressWrapper}>
+                <Text style={styles.loadingText}>
+                  Securely syncing offline... {Math.round(progress * 100)}%
+                </Text>
+                <View style={styles.progressBarBg}>
+                  <View style={[styles.progressBarFill, { width: `${progress * 100}%` }]} />
+                </View>
+              </View>
             </View>
           )}
         </View>
@@ -141,12 +165,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight ? StatusBar.currentHeight + 8 : 40 : 54,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ? StatusBar.currentHeight + 8 : 40) : 54,
     paddingBottom: 12,
     paddingHorizontal: 16,
     backgroundColor: '#1e1e2e',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.08)',
+    zIndex: 10,
   },
   topBarLeft: {
     flexDirection: 'row',
@@ -177,26 +202,59 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  webViewContainer: {
+  contentContainer: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f1f5f9',
   },
-  webView: {
+  pdf: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    width: width,
+    backgroundColor: '#f1f5f9',
   },
-  loadingOverlay: {
+  skeletonContainer: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#ffffff',
+    padding: 24,
+    zIndex: 5,
+  },
+  skeletonHeader: {
+    height: 40,
+    width: '60%',
+    backgroundColor: '#e2e8f0',
+    borderRadius: 8,
+    marginBottom: 32,
+    marginTop: 12,
+  },
+  skeletonLine: {
+    height: 16,
+    backgroundColor: '#e2e8f0',
+    borderRadius: 4,
+    marginBottom: 16,
+  },
+  progressWrapper: {
+    position: 'absolute',
+    bottom: 60,
+    left: 24,
+    right: 24,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   loadingText: {
-    marginTop: 16,
-    color: '#6366f1',
-    fontSize: 15,
+    color: '#64748b',
+    fontSize: 14,
     fontWeight: '600',
-    letterSpacing: 0.2,
+    marginBottom: 12,
+  },
+  progressBarBg: {
+    height: 6,
+    width: '100%',
+    backgroundColor: '#e2e8f0',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#6366f1',
+    borderRadius: 3,
   },
   errorContainer: {
     flex: 1,

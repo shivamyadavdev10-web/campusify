@@ -42,4 +42,4 @@ export const asyncStoragePersister = createAsyncStoragePersister({
 });
 
 // Cache entries older than this are discarded on app start
-export const CACHE_MAX_AGE = 24 * 60 * 60 * 1000; // 24 hours
+export const CACHE_MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days

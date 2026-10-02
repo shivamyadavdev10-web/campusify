@@ -119,9 +119,12 @@ export default function HomeScreen() {
       >
         {/* Header & Search */}
         <View className="pt-16 pb-4 px-5">
-          <View className="flex-row items-baseline mb-6">
-            <Text className="text-3xl font-bold text-on-surface">Campusify</Text>
-            <View className="w-2 h-2 rounded-full bg-[#f97316] ml-1" />
+          <View className="flex-row justify-between items-center mb-6">
+            <View className="flex-row items-baseline">
+              <Text className="text-3xl font-bold text-on-surface">Campusify</Text>
+              <View className="w-2 h-2 rounded-full bg-[#f97316] ml-1" />
+            </View>
+            <NotificationBell />
           </View>
 
           <View className="flex-row mb-6" style={{ gap: 10 }}>

@@ -11,3 +11,7 @@ BE/compusify.json
 BE/checkpass.js
 BE/fix-bunny-data.js
 BE/get-bunny-key.js
+
+# Tests and temporary files
+__tests__/
+checkout.html

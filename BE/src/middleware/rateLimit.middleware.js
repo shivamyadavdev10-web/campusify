@@ -8,7 +8,7 @@ const getRealIp = (req) => req.headers['x-forwarded-for']?.split(',')[0]?.trim()
 // 🟢 NORMAL APIS KE LIYE (Jaise courses fetch karna)
 export const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minute ki window
-    max: 100, // Ek IP address se max 100 request (Exam time pe safe zone)
+    max: 1500, // 1500 to handle college Wi-Fi // Ek IP address se max 100 request (Exam time pe safe zone)
     // FIX: Use real client IP from Render's load balancer headers
     keyGenerator: getRealIp,
     message: { 

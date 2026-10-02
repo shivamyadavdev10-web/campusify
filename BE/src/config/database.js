@@ -15,9 +15,9 @@ const dbConnect = async () => {
         await mongoose.connect(process.env.MONGODB_URI, {
             maxPoolSize: 10,              // Sufficient for single Render instance
             minPoolSize: 2,               // Keep 2 alive for instant response
-            maxIdleTimeMS: 30000,         // Close idle connections after 30s
+            maxIdleTimeMS: 10000,         // Close idle connections after 30s
             serverSelectionTimeoutMS: 5000, // Fail fast if DB unreachable
-            socketTimeoutMS: 30000,       // Don't let queries hang forever
+            socketTimeoutMS: 20000,       // Don't let queries hang forever
             heartbeatFrequencyMS: 10000,  // Check server health every 10s
         });
         console.log("✅ MongoDB connected successfully (pool: 2-10 connections)");

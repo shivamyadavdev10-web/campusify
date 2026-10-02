@@ -8,7 +8,7 @@ import { sendPushNotifications } from "../utils/pushNotification.utils.js";
 // ADMIN: CREATE AND SEND NOTIFICATION
 // ==========================================
 export const createNotification = catchAsync(async (req, res) => {
-    const { title, message, type, branchId, semesterId } = req.body;
+    const { title, message, type, branchId, semesterId, url, imageUrl } = req.body;
 
     if (!title || !message) {
         throw new ApiError(400, "Title and message are required");
@@ -23,6 +23,8 @@ export const createNotification = catchAsync(async (req, res) => {
         title,
         message,
         type: type || 'info',
+        url,
+        imageUrl,
         targetAudience: Object.keys(targetAudience).length > 0 ? targetAudience : undefined
     });
 
@@ -31,14 +33,10 @@ export const createNotification = catchAsync(async (req, res) => {
     
     // If targeted, only send to students in that branch/semester
     if (branchId || semesterId) {
-        // Find semesters that match the criteria
         const semQuery = {};
         if (branchId) semQuery.branchId = branchId;
         if (semesterId) semQuery._id = semesterId;
         
-        // This is a bit simplified; depending on exact requirements, 
-        // you might need to query the 'purchasedSemesters' array properly.
-        // For now, if we target a semester, we find users who purchased it.
         if (semesterId) {
             userQuery.purchasedSemesters = semesterId;
         }
@@ -51,7 +49,9 @@ export const createNotification = catchAsync(async (req, res) => {
     if (pushTokens.length > 0) {
         await sendPushNotifications(pushTokens, title, message, {
             notificationId: notification._id,
-            type: notification.type
+            type: notification.type,
+            url,
+            imageUrl
         });
     }
 

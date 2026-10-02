@@ -4,6 +4,8 @@ const notificationSchema = new mongoose.Schema({
     title: { type: String, required: true, trim: true },
     message: { type: String, required: true, trim: true },
     type: { type: String, enum: ['info', 'alert', 'course_update'], default: 'info' },
+    url: { type: String, default: null },
+    imageUrl: { type: String, default: null },
     targetAudience: { 
         branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null },
         semesterId: { type: mongoose.Schema.Types.ObjectId, ref: 'Semester', default: null }

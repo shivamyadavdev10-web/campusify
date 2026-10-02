@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, ScrollView, Platform } from 'react-native';
 import { Bell, X, CheckCheck, Clock } from 'lucide-react-native';
-import { useNotifications, markNotificationsRead } from '@/src/hooks/useNotifications';
+import { useNotifications, markNotificationsRead, AppNotification } from '@/src/hooks/useNotifications';
 import { useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 
 export function NotificationBell() {
   const [modalVisible, setModalVisible] = useState(false);
   const { data, isLoading } = useNotifications();
   const queryClient = useQueryClient();
+  const router = useRouter();
 
-  const notifications = data?.notifications || [];
+  const notifications: AppNotification[] = data?.notifications || [];
   const unreadCount = data?.unreadCount || 0;
 
   const handleOpen = () => {
@@ -19,6 +21,14 @@ export function NotificationBell() {
       markNotificationsRead().then(() => {
         queryClient.invalidateQueries({ queryKey: ['notifications'] });
       }).catch(console.error);
+    }
+  };
+
+  const handleNotificationPress = (notif: AppNotification) => {
+    // If the notification has an internal route, navigate and close modal
+    if (notif.url) {
+      setModalVisible(false);
+      router.push(notif.url as any);
     }
   };
 
@@ -77,7 +87,7 @@ export function NotificationBell() {
       <Modal
         visible={modalVisible}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setModalVisible(false)}
       >
         <View className="flex-1 bg-black/40 justify-end">
@@ -87,8 +97,13 @@ export function NotificationBell() {
             onPress={() => setModalVisible(false)} 
           />
           
-          <View className="bg-white rounded-t-3xl w-full h-[70%] shadow-2xl">
-            <View className="flex-row items-center justify-between px-6 py-5 border-b border-gray-100">
+          <View className="bg-white rounded-t-3xl w-full h-[75%] shadow-2xl">
+            {/* Modern Drag Handle Aesthetic */}
+            <View className="items-center pt-3 pb-1">
+              <View className="w-12 h-1.5 bg-gray-200 rounded-full" />
+            </View>
+
+            <View className="flex-row items-center justify-between px-6 py-4 border-b border-gray-100">
               <View className="flex-row items-center">
                 <Bell color="#0b1c30" size={22} className="mr-2" />
                 <Text className="text-xl font-bold text-slate-900">Notifications</Text>
@@ -116,9 +131,11 @@ export function NotificationBell() {
                 </View>
               ) : (
                 <View style={{ gap: 12 }}>
-                  {notifications.slice(0, 5).map((notif: any) => (
-                    <View 
+                  {notifications.slice(0, 7).map((notif: AppNotification) => (
+                    <TouchableOpacity 
                       key={notif._id} 
+                      onPress={() => handleNotificationPress(notif)}
+                      activeOpacity={notif.url ? 0.7 : 1}
                       className="bg-white border border-slate-100 rounded-2xl p-4 flex-row items-start"
                       style={Platform.select({
                         ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3 },
@@ -140,12 +157,12 @@ export function NotificationBell() {
                           </Text>
                         </View>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   ))}
                   
-                  {notifications.length > 5 && (
+                  {notifications.length > 7 && (
                      <View className="py-4 items-center">
-                         <Text className="text-slate-400 text-xs font-medium uppercase tracking-wider">Only showing latest 5</Text>
+                         <Text className="text-slate-400 text-xs font-medium uppercase tracking-wider">Only showing latest 7</Text>
                      </View>
                   )}
                 </View>

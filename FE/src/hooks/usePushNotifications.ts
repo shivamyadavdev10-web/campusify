@@ -3,7 +3,8 @@ import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import { apiClient } from '../core/api/client'; // Assuming this is the axios instance
+import { useRouter } from 'expo-router';
+import { apiClient } from '../core/api/client'; 
 import { useAuthStore } from '../core/stores/auth.store';
 
 // Set how notifications are handled when the app is in the foreground
@@ -23,6 +24,7 @@ export function usePushNotifications() {
   
   const token = useAuthStore(state => state.token);
   const isAuth = !!token;
+  const router = useRouter();
 
   useEffect(() => {
     // Only register if we are logged in
@@ -44,7 +46,13 @@ export function usePushNotifications() {
     // This listener is fired whenever a user taps on or interacts with a notification 
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
       console.log('User interacted with notification:', response);
-      // Here you can navigate the user to a specific screen if needed
+      
+      // Deep Linking Logic
+      const data = response.notification.request.content.data;
+      if (data && typeof data.url === 'string') {
+        // e.g. data: { url: '/course/123' }
+        router.push(data.url as any);
+      }
     });
 
     return () => {
@@ -55,7 +63,7 @@ export function usePushNotifications() {
         Notifications.removeNotificationSubscription(responseListener.current);
       }
     };
-  }, [isAuth]);
+  }, [isAuth, router]);
 
   return { expoPushToken, notification };
 }
@@ -86,8 +94,6 @@ async function registerForPushNotificationsAsync() {
       return;
     }
     
-    // Learn more about projectId:
-    // https://docs.expo.dev/push-notifications/push-notifications-setup/#configure-projectid
     const projectId =
       Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
       
@@ -107,4 +113,3 @@ async function registerForPushNotificationsAsync() {
 
   return token;
 }
-
