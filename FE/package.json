@@ -10,8 +10,8 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
-    "@config-plugins/react-native-blob-util": "^14.0.2",
-    "@config-plugins/react-native-pdf": "^14.0.2",
+    "@config-plugins/react-native-blob-util": "^8.0.0",
+    "@config-plugins/react-native-pdf": "^8.0.0",
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-native-community/netinfo": "11.3.1",
     "@sentry/react-native": "~5.24.3",
